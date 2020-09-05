@@ -1,8 +1,9 @@
 
 from pathlib import Path
+import csv
 
-#baks_dir = '~/Desktop/wemDesk/20200817_BackupRotation/_0_bak/'
-baks_dir = '~/Desktop/wemDesk/20200817_BackupRotation/_0_bak/_older/20200831'
+#baks_dir = '~/Desktop/wemDesk/20200817_BackupRotation/_0_bak/_older/20200831'
+baks_dir = '~/Desktop/wemDesk/20200817_BackupRotation/_0_bak/'
 
 repo_dir = '~/Desktop/test/bakrot_repo'
 
@@ -24,10 +25,23 @@ for f in bak_files:
 
 date_time_tags.sort()
 
+baks_list = []
+
 for a in date_time_tags:
-    print(f"--- file names containing '{a}' -->")
+    #print(f"--- file names containing '{a}' -->")
     fspec = f"*{a}*"
     dt_files = Path(baks_dir).rglob(fspec)
     for b in dt_files:
-        print(str(b))
+        bak_basename = '.'.join(b.name.split('.')[:-2])
+        dst = Path(repo_dir).resolve().joinpath(bak_basename)
+        #print(str(b))
+        #print(str(dst))
+        baks_list.append((str(b), str(dst)))
 
+# for t in baks_list:
+#     print(t)
+
+with open ('test.csv', 'w', newline='') as csv_file:
+    writer = csv.writer(csv_file)
+    writer.writerow(['BackupFileName','RepoFileName'])
+    writer.writerows(baks_list)
