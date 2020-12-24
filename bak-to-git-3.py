@@ -18,6 +18,7 @@ import shutil
 import subprocess
 from collections import namedtuple
 from datetime import datetime
+from datetime import timedelta
 from pathlib import Path
 
 
@@ -28,6 +29,9 @@ input_csv = Path.cwd() / 'test' / 'out-1-files-changed-TEST-1.csv'
 repo_dir = '~/Desktop/test/bakrot_repo'
 
 log_name = Path.cwd() / 'bak-to-git-3.log'
+
+#  Set to False for debugging without actually running git commands.
+do_git = True
 
 
 CommitProps = namedtuple(
@@ -41,10 +45,10 @@ def write_log(msg):
         log_file.write(f"[{datetime.now():%Y%m%d_%H%M%S}] {msg}\n")
 
 
-def datetime_tag_to_str(dt_tag):
-    # yyyymmdd_hhmmss
-    # 012345678901234
-    return '{0}-{1}-{2} {3}:{4}:{5}'.format(
+def git_date_strings(dt_tag):
+    # Tag format: yyyymmdd_hhmmss
+    #      index: 012345678901234
+    iso_fmt = '{0}-{1}-{2}T{3}:{4}:{5}'.format(
         dt_tag[:4],
         dt_tag[4:6],
         dt_tag[6:8],
@@ -52,6 +56,13 @@ def datetime_tag_to_str(dt_tag):
         dt_tag[11:13],
         dt_tag[13:]
     )
+    commit_dt = datetime.fromisoformat(iso_fmt)
+    author_dt = commit_dt - timedelta(seconds=5)
+    return (
+        author_dt.strftime('%Y-%m-%dT%H:%M:%S'), 
+        commit_dt.strftime('%Y-%m-%dT%H:%M:%S')
+    )
+
 
 write_log('BEGIN')
 
@@ -89,9 +100,9 @@ target_path = Path(repo_dir).resolve()
 for dt_tag in datetime_tags:
     print(dt_tag)
 
-    datetime_str = datetime_tag_to_str(dt_tag)
+    author_dt, commit_dt = git_date_strings(dt_tag)
 
-    git_env = {"GIT_COMMITTER_DATE": datetime_str, "GIT_AUTHOR_DATE": datetime_str}
+    git_env = {"GIT_COMMITTER_DATE": commit_dt, "GIT_AUTHOR_DATE": author_dt}
 
     commit_msg = ''
 
@@ -109,8 +120,9 @@ for dt_tag in datetime_tags:
             shutil.copy2(item.full_name, target_name)
             if not existing_file:
                 write_log(f"({item.datetime_tag}) RUN git add {item.base_name}")
-                result = subprocess.run(["git", "add", item.base_name], cwd=target_path, env=git_env)                
-                assert result.returncode == 0
+                if do_git:
+                    result = subprocess.run(["git", "add", item.base_name], cwd=target_path, env=git_env)                
+                    assert result.returncode == 0
 
     if len(commit_msg) == 0:
         commit_msg = f"({dt_tag})"
@@ -120,8 +132,9 @@ for dt_tag in datetime_tags:
     print(f"Commit message: '{commit_msg}'\n")
 
     write_log(f"({dt_tag}) RUN git commit '{commit_msg}'")
-    result = subprocess.run(["git", "commit", "-a", "-m", commit_msg], cwd=target_path, env=git_env)
-    assert result.returncode == 0
+    if do_git:
+        result = subprocess.run(["git", "commit", "-a", "-m", commit_msg], cwd=target_path, env=git_env)
+        assert result.returncode == 0
 
 write_log('END')
 
