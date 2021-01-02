@@ -11,22 +11,26 @@
 #
 # 
 #
-# 2020-12-21
+# 2020-12-22
 #----------------------------------------------------------------------
 
-from pathlib import Path
 import csv
 import subprocess
+from pathlib import Path
 
 #  Specify input file.
-input_csv = Path.cwd() / 'output' / 'out-1-files-changed.csv'
+#input_csv = Path.cwd() / 'output' / 'out-1-files-changed.csv'
 #input_csv = Path.cwd() / 'test' / 'out-1-files-changed-TEST-1.csv'
+input_csv = Path.cwd() / 'prepare' / 'out-1-files-changed-EDIT.csv'
+
 
 
 def run_bc(left_file, right_file):
     print("Compare\n  L: {0}\n  R: {1}".format(left_file, right_file))
-    #subprocess.run(['bcompare', left_file, right_file])
+    subprocess.run(['bcompare', left_file, right_file])
 
+
+skip_prev = None
 
 with open(input_csv) as csv_file:
     reader = csv.DictReader(csv_file)
@@ -49,8 +53,23 @@ with open(input_csv) as csv_file:
                 #  of the commit message.
                 force_no_skip = row['SKIP_Y'].upper() == 'N'
 
-                if (not force_skip) and (no_msg or force_no_skip): 
-                    run_bc(row['prev_full_name'], row['full_name'])
+                if (not force_skip) and (no_msg or force_no_skip):
+                    if skip_prev is None:
+                        run_bc(row['prev_full_name'], row['full_name'])
+                    else:
+                        if row['base_name'] == skip_prev[0]:
+                            run_bc(skip_prev[1], row['full_name'])
+                        else:
+                            continue
+
+                    print('Continue or skip [Y,n,s]?')
+                    answer = input()
+                    if answer.lower() == 'n':
+                        break
+                    if answer.lower() == 's':
+                        skip_prev = (row['base_name'], row['prev_full_name'])
+                    else:
+                        skip_prev = None
 
 
-print('Done.')
+print('Done (bak-to-git-2.py).')
