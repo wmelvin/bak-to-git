@@ -10,7 +10,7 @@
 #
 # 
 #
-# 2021-01-02
+# 2021-01-03
 #----------------------------------------------------------------------
 
 import csv
@@ -34,7 +34,7 @@ repo_dir = '~/Desktop/test/bakrot_repo'
 log_name = Path.cwd() / 'bak-to-git-3.log'
 
 #  Set to False for debugging without actually running git commands.
-do_git = True
+do_git = False
 
 
 CommitProps = namedtuple(
@@ -71,6 +71,15 @@ def git_date_strings(dt_tag):
         author_dt.strftime('%Y-%m-%dT%H:%M:%S'), 
         commit_dt.strftime('%Y-%m-%dT%H:%M:%S')
     )
+
+
+def copy_filtered_content(src_name, dst_name):
+    with open(src_name, 'r') as src_file:
+        with open(dst_name, 'w') as dst_file:
+            for line in src_file.readlines():
+                # Filter out the email address I was using at the time.
+                dst_file.write(line.replace('**REDACTED**', ''))
+
 
 
 write_log('BEGIN')
@@ -123,10 +132,14 @@ for dt_tag in datetime_tags:
             commit_msg += s
             target_name =  target_path / Path(item.base_name).name
             existing_file = Path(target_name).exists()
+            
             print(f"COPY {item.full_name}")
             print(f"  TO {target_name}")
+
             # Copy file to target repo location.
-            shutil.copy2(item.full_name, target_name)
+            #shutil.copy2(item.full_name, target_name)
+            copy_filtered_content(item.full_name, target_name)
+
             if not existing_file:
                 write_log(f"({item.datetime_tag}) RUN git add {item.base_name}")
                 if do_git:
