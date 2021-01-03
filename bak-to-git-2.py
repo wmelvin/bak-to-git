@@ -11,12 +11,13 @@
 #
 # 
 #
-# 2020-12-22
+# 2020-01-03
 #----------------------------------------------------------------------
 
 import csv
 import subprocess
 from pathlib import Path
+
 
 #  Specify input file.
 #input_csv = Path.cwd() / 'output' / 'out-1-files-changed.csv'
@@ -24,19 +25,19 @@ from pathlib import Path
 input_csv = Path.cwd() / 'prepare' / 'out-1-files-changed-EDIT.csv'
 
 
-
 def run_bc(left_file, right_file):
     print("Compare\n  L: {0}\n  R: {1}".format(left_file, right_file))
     subprocess.run(['bcompare', left_file, right_file])
 
 
-skip_prev = None
 
+prevs = {}
 with open(input_csv) as csv_file:
     reader = csv.DictReader(csv_file)
     for row in reader:
         if len(row['sort_key']) > 0:
             print(row['sort_key'])
+            base_name = row['base_name']
             if len(row['prev_full_name']) == 0:
                 print("New file")
             else:
@@ -53,23 +54,28 @@ with open(input_csv) as csv_file:
                 #  of the commit message.
                 force_no_skip = row['SKIP_Y'].upper() == 'N'
 
-                if (not force_skip) and (no_msg or force_no_skip):
-                    if skip_prev is None:
-                        run_bc(row['prev_full_name'], row['full_name'])
-                    else:
-                        if row['base_name'] == skip_prev[0]:
-                            run_bc(skip_prev[1], row['full_name'])
+                if (not force_skip):
+                    if (no_msg or force_no_skip):
+                        if base_name in prevs.keys():
+                            run_bc(prevs[base_name], row['full_name'])
                         else:
-                            continue
+                            if len(row['prev_full_name']) == 0:
+                                print(f"New file: {base_name}")
+                            else:
+                                print(f"UNEXPECTED PREVIOUS VERSION: {base_name}")
+                                run_bc(row['prev_full_name'], row['full_name'])
 
-                    print('Continue or skip [Y,n,s]?')
-                    answer = input()
-                    if answer.lower() == 'n':
-                        break
-                    if answer.lower() == 's':
-                        skip_prev = (row['base_name'], row['prev_full_name'])
+                        answer = input('Continue (or Keep left) [Y,n,k]? ')
+
+                        if answer.lower() == 'n':
+                            break
+
+                        if answer.lower() == 'k':
+                            print("(Keep previous Left file for comparison).")
+                        else:
+                            prevs[base_name] = row['full_name']
                     else:
-                        skip_prev = None
+                        prevs[base_name] = row['full_name']
 
 
 print('Done (bak-to-git-2.py).')
