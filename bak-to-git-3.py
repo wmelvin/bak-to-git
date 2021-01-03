@@ -10,7 +10,7 @@
 #
 # 
 #
-# 2020-12-22
+# 2021-01-02
 #----------------------------------------------------------------------
 
 import csv
@@ -23,8 +23,11 @@ from pathlib import Path
 
 
 #  Specify input file.
+#input_csv = Path.cwd() / 'test' / 'out-1-files-changed-TEST-1.csv'
 #input_csv = Path.cwd() / 'output' / 'out-1-files-changed-EDIT.csv'
-input_csv = Path.cwd() / 'test' / 'out-1-files-changed-TEST-1.csv'
+#input_csv = Path.cwd() / 'output' / 'out-1-files-changed.csv'
+input_csv = Path.cwd() / 'prepare' / 'out-1-files-changed-EDIT.csv'
+
 
 repo_dir = '~/Desktop/test/bakrot_repo'
 
@@ -56,8 +59,14 @@ def git_date_strings(dt_tag):
         dt_tag[11:13],
         dt_tag[13:]
     )
+    
     commit_dt = datetime.fromisoformat(iso_fmt)
+    
+    # I feel like the author date should be a little before
+    # the committer date, rather than exactly the same,
+    # but this is probably dumb.
     author_dt = commit_dt - timedelta(seconds=5)
+    
     return (
         author_dt.strftime('%Y-%m-%dT%H:%M:%S'), 
         commit_dt.strftime('%Y-%m-%dT%H:%M:%S')
@@ -121,7 +130,11 @@ for dt_tag in datetime_tags:
             if not existing_file:
                 write_log(f"({item.datetime_tag}) RUN git add {item.base_name}")
                 if do_git:
-                    result = subprocess.run(["git", "add", item.base_name], cwd=target_path, env=git_env)                
+                    result = subprocess.run(
+                        ["git", "add", item.base_name], 
+                        cwd=target_path, 
+                        env=git_env
+                    )                
                     assert result.returncode == 0
 
     if len(commit_msg) == 0:
@@ -133,7 +146,11 @@ for dt_tag in datetime_tags:
 
     write_log(f"({dt_tag}) RUN git commit '{commit_msg}'")
     if do_git:
-        result = subprocess.run(["git", "commit", "-a", "-m", commit_msg], cwd=target_path, env=git_env)
+        result = subprocess.run(
+            ["git", "commit", "-a", "-m", commit_msg], 
+            cwd=target_path, 
+            env=git_env
+        )
         assert result.returncode == 0
 
 write_log('END')
