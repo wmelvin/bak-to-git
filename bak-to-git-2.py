@@ -11,7 +11,7 @@
 #
 # 
 #
-# 2020-01-03
+# 2020-01-09
 #----------------------------------------------------------------------
 
 import csv
@@ -38,7 +38,10 @@ with open(input_csv) as csv_file:
         if len(row['sort_key']) > 0:
             print(row['sort_key'])
             base_name = row['base_name']
-            if len(row['prev_full_name']) == 0:
+
+            #if len(row['prev_full_name']) == 0:
+            if False:
+
                 print("New file")
             else:
                 no_msg = len(row['COMMIT_MESSAGE']) == 0
@@ -61,6 +64,8 @@ with open(input_csv) as csv_file:
                         else:
                             if len(row['prev_full_name']) == 0:
                                 print(f"New file: {base_name}")
+                                prevs[base_name] = row['full_name']
+                                continue
                             else:
                                 print(f"UNEXPECTED PREVIOUS VERSION: {base_name}")
                                 run_bc(row['prev_full_name'], row['full_name'])
