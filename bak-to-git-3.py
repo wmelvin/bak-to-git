@@ -26,7 +26,8 @@ from pathlib import Path
 #input_csv = Path.cwd() / 'test' / 'out-1-files-changed-TEST-1.csv'
 #input_csv = Path.cwd() / 'output' / 'out-1-files-changed-EDIT.csv'
 #input_csv = Path.cwd() / 'output' / 'out-1-files-changed.csv'
-input_csv = Path.cwd() / 'prepare' / 'out-1-files-changed-EDIT.csv'
+#input_csv = Path.cwd() / 'prepare' / 'out-1-files-changed-EDIT.csv'
+input_csv = Path.cwd() / 'prepare' / 'out-1-files-changed-UPLOAD-1.csv'
 
 
 repo_dir = '~/Desktop/test/bakrot_repo'
@@ -34,7 +35,7 @@ repo_dir = '~/Desktop/test/bakrot_repo'
 log_name = Path.cwd() / 'bak-to-git-3.log'
 
 #  Set to False for debugging without actually running git commands.
-do_git = False
+do_git = True
 
 
 CommitProps = namedtuple(
@@ -78,8 +79,9 @@ def copy_filtered_content(src_name, dst_name):
         with open(dst_name, 'w') as dst_file:
             for line in src_file.readlines():
                 # Filter out the email address I was using at the time.
-                dst_file.write(line.replace('**REDACTED**', ''))
-
+                s = line.replace('(**REDACTED**)', '')
+                s = s.replace('**REDACTED**', '')
+                dst_file.write(s)
 
 
 write_log('BEGIN')
