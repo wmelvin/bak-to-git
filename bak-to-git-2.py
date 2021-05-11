@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 
 #----------------------------------------------------------------------
-# bak-to-git-2.py
+#  bak-to-git-2.py
 #
-# Step 2: Read a CSV file, created in step 1, and launch the 'Beyond 
-# Compare' file differencing tool to see changes.
+#  Step 2: Read a CSV file, created in step 1, and launch the 'Beyond 
+#  Compare' file differencing tool to see changes.
 #
-# Manually add commit messages to the CSV file, and select files to
-# skip to batch changes into a single commit.
+#  Manually add commit messages to the CSV file, and select files to
+#  skip to batch changes into a single commit.
 #
-# 
+#  
 #
-# 2020-01-09
+#  2021-05-11
 #----------------------------------------------------------------------
 
 import csv

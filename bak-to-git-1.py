@@ -1,31 +1,28 @@
 #!/usr/bin/env python3
 
 #----------------------------------------------------------------------
-# bak-to-git-1.py
+#  bak-to-git-1.py
 #
-# Step 1: Build a list of backup files by date-time stamp in the 
-# file names. Sort so the files changed in with the same time stamp
-# can be compared and commited as one commit. This step only builds
-# the list. 
+#  Step 1: Build a list of backup files by date-time stamp in the 
+#  file names. Sort so the files changed in with the same time stamp
+#  can be compared and commited as one commit. This step only builds
+#  the list. 
 #
-# In step 2, the files will be compared so commit messages can be 
-# entered in the CSV file. Files can also be skipped so changes can
-# be batched into a single commit.
+#  In step 2, the files will be compared so commit messages can be 
+#  entered in the CSV file. Files can also be skipped so changes can
+#  be batched into a single commit.
 #
-# 
+#  
 #
-# 2020-12-21
+#  2021-05-11
 #----------------------------------------------------------------------
 
-from pathlib import Path
-from collections import namedtuple
 import csv
-
+from collections import namedtuple
+from pathlib import Path
 
 #baks_dir = '~/Work/20200817_BackupRotation/_0_bak/_older/20200831'
 baks_dir = '~/Work/20200817_BackupRotation/_0_bak/'
-
-repo_dir = '~/Desktop/test/bakrot_repo'
 
 
 BakProps = namedtuple('BakProps', 'sort_key, full_name, file_name, base_name, datetime_tag')
@@ -114,7 +111,7 @@ for dt in datetime_tags:
             prev_content = Path(prev_props.full_name).read_text()
             this_content = Path(t.full_name).read_text()
             if prev_content != this_content:
-                # file changed
+                #  file changed
                 changed_list.append(
                     ChangeProps(
                         t.sort_key, 
@@ -128,7 +125,7 @@ for dt in datetime_tags:
                 )
                 prev_files[t.base_name] = t
         else:
-            # new file
+            #  new file
             changed_list.append(
                 ChangeProps(
                     t.sort_key, 
@@ -163,4 +160,3 @@ with open (filename_out_files_changed, 'w', newline='') as csv_file:
 
 
 print('Done (bak-to-git-1.py).')
-
