@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 
 #----------------------------------------------------------------------
-# bak-to-git-3.py
+#  bak-to-git-3.py
 #
-# Step 3: Read a CSV file edited in step 2 where commit messages are 
-# added and files to be skipped are flagged.
+#  Step 3: Read a CSV file edited in step 2 where commit messages are 
+#  added and files to be skipped are flagged.
 #
-# Run git to commit each change with the specified date and time.
+#  Run git to commit each change with the specified date and time.
 #
-# 
+#  
 #
-# 2021-01-03
+#  2021-05-11
 #----------------------------------------------------------------------
 
 import csv
@@ -50,8 +50,10 @@ def write_log(msg):
 
 
 def git_date_strings(dt_tag):
-    # Tag format: yyyymmdd_hhmmss
-    #      index: 012345678901234
+    
+    #  Tag format: yyyymmdd_hhmmss
+    #       index: 012345678901234
+    #
     iso_fmt = '{0}-{1}-{2}T{3}:{4}:{5}'.format(
         dt_tag[:4],
         dt_tag[4:6],
@@ -63,9 +65,10 @@ def git_date_strings(dt_tag):
     
     commit_dt = datetime.fromisoformat(iso_fmt)
     
-    # I feel like the author date should be a little before
-    # the committer date, rather than exactly the same,
-    # but this is probably dumb.
+    #  I feel like the author date should be a little before
+    #  the committer date, rather than exactly the same,
+    #  but that might be silly.
+    #
     author_dt = commit_dt - timedelta(seconds=5)
     
     return (
@@ -78,7 +81,7 @@ def copy_filtered_content(src_name, dst_name):
     with open(src_name, 'r') as src_file:
         with open(dst_name, 'w') as dst_file:
             for line in src_file.readlines():
-                # Filter out the email address I was using at the time.
+                #  Filter out the email address I was using at the time.
                 s = line.replace('(**REDACTED**)', '')
                 s = s.replace('**REDACTED**', '')
                 dst_file.write(s)
@@ -138,7 +141,7 @@ for dt_tag in datetime_tags:
             print(f"COPY {item.full_name}")
             print(f"  TO {target_name}")
 
-            # Copy file to target repo location.
+            #  Copy file to target repo location.
             #shutil.copy2(item.full_name, target_name)
             copy_filtered_content(item.full_name, target_name)
 
