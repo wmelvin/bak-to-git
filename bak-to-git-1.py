@@ -3,10 +3,16 @@
 #----------------------------------------------------------------------
 #  bak-to-git-1.py
 #
-#  Step 1: Build a list of backup files by date-time stamp in the 
-#  file names. Sort so the files changed in with the same time stamp
-#  can be compared and commited as one commit. This step only builds
-#  the list. 
+#  This script uses backup files, created by my wipbak.sh, script to 
+#  build a series of git commits. This is for a project where the 
+#  simple shell script was configured to make work-in-progress backups 
+#  of the fiew files in the project. Git was not considered at the 
+#  start, so this is an attempt to back(up) into a commit history.
+#
+#  Step 1: Build a list of backup files and extract the date_time tags
+#  from the file names. Sort the list so the files changed in backups
+#  with the same date_time tag can be compared and commited as one 
+#  commit. This step only builds the list and writes it to a CSV file.
 #
 #  In step 2, the files will be compared so commit messages can be 
 #  entered in the CSV file. Files can also be skipped so changes can
@@ -14,11 +20,12 @@
 #
 #  
 #
-#  2021-05-11
+#  2021-05-18
 #----------------------------------------------------------------------
 
 import csv
 from collections import namedtuple
+from datetime import datetime
 from pathlib import Path
 
 #baks_dir = '~/Work/20200817_BackupRotation/_0_bak/_older/20200831'
@@ -65,7 +72,7 @@ do_write_debugging_files = False
 
 #  Write all-files list for debugging.
 if do_write_debugging_files:
-    filename_out_all = Path.cwd() / 'output' / 'out-1a-files-all.csv'
+    filename_out_all = Path.cwd() / 'output' / 'debug-1-all-files.csv'
     with open (filename_out_all, 'w', newline='') as csv_file:
         writer = csv.writer(csv_file)
         writer.writerow(['sort_key','full_name','file_name','base_name','datetime_tag'])
@@ -74,7 +81,7 @@ if do_write_debugging_files:
 
 #  Write base-names list for debugging.
 if do_write_debugging_files:
-    filename_out_base_names = Path.cwd() / 'output' / 'out-1b-base_names.csv'
+    filename_out_base_names = Path.cwd() / 'output' / 'debug-2-base_names.csv'
     with open (filename_out_base_names, 'w', newline='') as out_file:
         out_file.write(f"base_name\n")
         for a in base_names:
@@ -83,7 +90,7 @@ if do_write_debugging_files:
 
 #  Write datetime-tags list for debugging.
 if do_write_debugging_files:
-    filename_out_datetime_tags = Path.cwd() / 'output' / 'out-1c-datetime_tags.csv'
+    filename_out_datetime_tags = Path.cwd() / 'output' / 'debug-3-datetime_tags.csv'
     with open (filename_out_datetime_tags, 'w', newline='') as out_file:
         out_file.write(f"datetime_tag\n")
         for a in datetime_tags:
@@ -145,7 +152,12 @@ for dt in datetime_tags:
 
 
 #  Write main output from step 1.
-filename_out_files_changed = Path.cwd() / 'output' / 'out-1-files-changed.csv'
+
+output_base_name = 'out-1-files-changed-{0}.csv'.format(
+    datetime.now().strftime('%Y%m%d_%H%M%S')
+)
+filename_out_files_changed = Path.cwd() / 'output' / output_base_name
+
 with open (filename_out_files_changed, 'w', newline='') as csv_file:
     writer = csv.writer(csv_file)
     
