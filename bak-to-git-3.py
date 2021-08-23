@@ -10,7 +10,7 @@
 #
 #  
 #
-#  2021-05-18
+#  2021-08-23
 # ---------------------------------------------------------------------
 
 import csv
@@ -20,24 +20,28 @@ from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
 
+# -- Target-specific configuration:
 
-#  Specify input file.
 # input_csv = Path.cwd() / 'test' / 'out-1-files-changed-TEST-1.csv'
 # input_csv = Path.cwd() / 'output' / 'out-1-files-changed-EDIT.csv'
 # input_csv = Path.cwd() / 'output' / 'out-1-files-changed.csv'
 # input_csv = Path.cwd() / 'prepare' / 'out-1-files-changed-EDIT.csv'
 
 # input_csv = Path.cwd() / 'prepare' / 'out-1-files-changed-UPLOAD-1.csv'
-input_csv = Path.cwd() / 'prepare' / 'out-1-files-changed-UPLOAD-2.csv'
+# input_csv = Path.cwd() / 'prepare' / 'out-1-files-changed-UPLOAD-2.csv'
 
+input_csv = Path.cwd() / 'prepare' / 'out-1-files-changed-UPLOAD-1-newpath.csv'
+#  Changed '/Work/' to '/Projects/' in file paths.
 
 repo_dir = '~/Desktop/test/bakrot_repo'
 
-log_name = Path.cwd() / 'bak-to-git-3.log'
+# -- General configuration:
 
+do_run = True
 #  Set to False for debugging without actually running git commands.
 #  This will still copy files to the repo directory.
-do_git = True
+
+log_name = Path.cwd() / 'log-bak-to-git-3.txt'
 
 
 CommitProps = namedtuple(
@@ -47,8 +51,19 @@ CommitProps = namedtuple(
 
 
 def write_log(msg):
+    print(msg)
     with open(log_name,  'a') as log_file:
         log_file.write(f"[{datetime.now():%Y%m%d_%H%M%S}] {msg}\n")
+
+
+def log_fmt(items):
+    s = ''
+    for item in items:
+        if ' ' in item:
+            s += f'"{item}" '
+        else:
+            s += f'{item} '
+    return s.strip()
 
 
 def git_date_strings(dt_tag):
@@ -151,14 +166,13 @@ def main():
                 copy_filtered_content(item.full_name, target_name)
 
                 if not existing_file:
+                    cmds = ["git", "add", item.base_name]
                     write_log(
-                        f"({item.datetime_tag}) RUN git add {item.base_name}"
+                        "({0}) RUN: {1}".format(item.datetime_tag, log_fmt(cmds))
                     )
-                    if do_git:
+                    if do_run:
                         result = subprocess.run(
-                            ["git", "add", item.base_name],
-                            cwd=target_path,
-                            env=git_env
+                            cmds, cwd=target_path, env=git_env
                         )
                         assert result.returncode == 0
 
@@ -167,14 +181,13 @@ def main():
         else:
             commit_msg = commit_msg.strip()
 
-        print(f"Commit message: '{commit_msg}'\n")
+        cmds = ["git", "commit", "-a", "-m", commit_msg]
 
-        write_log(f"({dt_tag}) RUN git commit '{commit_msg}'")
-        if do_git:
+        write_log("({0}) RUN: {1}".format(dt_tag, log_fmt(cmds)))
+
+        if do_run:
             result = subprocess.run(
-                ["git", "commit", "-a", "-m", commit_msg],
-                cwd=target_path,
-                env=git_env
+                cmds, cwd=target_path, env=git_env
             )
             assert result.returncode == 0
 
