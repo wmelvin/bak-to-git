@@ -16,9 +16,10 @@
 
 import csv
 import subprocess
+import sys
 from collections import namedtuple
 from datetime import datetime
-from datetime import timedelta
+# from datetime import timedelta
 from pathlib import Path
 
 
@@ -33,9 +34,15 @@ log_name = Path.cwd() / 'log-bak-to-fossil-3.txt'
 
 #  Set to False for debugging without actually running the SCM commands.
 #  This will still copy files to the repo directory.
-do_run_scm = False
+#
+do_run_scm = True
 
 fossil_exe = "~/bin/fossil"
+
+fossil_repo = "bakrot-repo"
+
+#  First tag in csv: 20200817_112125
+fossil_init_date = "2020-08-17T11:20:00"
 
 
 CommitProps = namedtuple(
@@ -45,12 +52,23 @@ CommitProps = namedtuple(
 
 
 def write_log(msg):
+    print(msg)
     with open(log_name,  'a') as log_file:
         log_file.write(f"[{datetime.now():%Y%m%d_%H%M%S}] {msg}\n")
 
 
-def get_date_strings(dt_tag):
+def log_fmt(items):
+    s = ''
+    for item in items:
+        if ' ' in item:
+            s += f'"{item}" '
+        else:
+            s += f'{item} '
+    return s.strip()
 
+
+def get_date_string(dt_tag):
+    #
     #  Tag format: yyyymmdd_hhmmss
     #       index: 012345678901234
     #
@@ -62,19 +80,8 @@ def get_date_strings(dt_tag):
         dt_tag[11:13],
         dt_tag[13:]
     )
-
     commit_dt = datetime.fromisoformat(iso_fmt)
-
-    #  I feel like the author date should be a little before
-    #  the committer date, rather than exactly the same,
-    #  but that might be silly.
-    #
-    author_dt = commit_dt - timedelta(seconds=5)
-
-    return (
-        author_dt.strftime('%Y-%m-%dT%H:%M:%S'),
-        commit_dt.strftime('%Y-%m-%dT%H:%M:%S')
-    )
+    return commit_dt.strftime('%Y-%m-%dT%H:%M:%S')
 
 
 def copy_filtered_content(src_name, dst_name):
@@ -87,8 +94,38 @@ def copy_filtered_content(src_name, dst_name):
                 dst_file.write(s)
 
 
+def fossil_create_repo(repo_dir: str):
+    #  Only proceed if the Fossil repository does not exist.
+    p = Path(repo_dir).joinpath(fossil_repo)
+    if p.exists():
+        sys.stderr.write("Fossil repository already exists: {0}\n".format(p))
+        sys.exit(1)
+
+    cmds = [
+        fossil_exe, "init", fossil_repo, "--date-override", fossil_init_date
+    ]
+    write_log(f"RUN: {log_fmt(cmds)}")
+    if do_run_scm:
+        result = subprocess.run(cmds, cwd=repo_dir)
+        assert result.returncode == 0
+
+
+def fossil_open_repo(repo_dir: str):
+    cmds = [fossil_exe, "open", fossil_repo]
+    write_log(f"RUN: {log_fmt(cmds)}")
+    if do_run_scm:
+        result = subprocess.run(cmds, cwd=repo_dir)
+        assert result.returncode == 0
+
+
 def main():
     write_log('BEGIN')
+
+    target_path = Path(repo_dir).resolve()
+
+    fossil_create_repo(target_path)
+
+    fossil_open_repo(target_path)
 
     commit_list = []
 
@@ -119,12 +156,10 @@ def main():
 
     datetime_tags.sort()
 
-    target_path = Path(repo_dir).resolve()
-
     for dt_tag in datetime_tags:
         print(dt_tag)
 
-        author_dt, commit_dt = get_date_strings(dt_tag)
+        commit_dt = get_date_string(dt_tag)
 
         commit_msg = ''
 
@@ -146,7 +181,7 @@ def main():
                 if not existing_file:
                     cmds = [fossil_exe, "add", item.base_name]
                     write_log(
-                        "({0}) RUN '{1}'".format(item.datetime_tag, cmds)
+                        "({0}) RUN: {1}".format(item.datetime_tag, cmds)
                     )
                     if do_run_scm:
                         result = subprocess.run(cmds, cwd=target_path)
@@ -157,11 +192,18 @@ def main():
         else:
             commit_msg = commit_msg.strip()
 
-        print(f"Commit message: '{commit_msg}'\n")
+        # print(f"Commit message: '{commit_msg}'\n")
 
-        cmds = [fossil_exe, "commit", "-m", commit_msg]
+        cmds = [
+            fossil_exe,
+            "commit",
+            "-m",
+            commit_msg,
+            "--date-override",
+            commit_dt
+        ]
 
-        write_log("({0}) RUN '{1}'".format(dt_tag, ' '.join(cmds)))
+        write_log("({0}) RUN: {1}".format(dt_tag, log_fmt(cmds)))
 
         if do_run_scm:
             result = subprocess.run(cmds, cwd=target_path)
