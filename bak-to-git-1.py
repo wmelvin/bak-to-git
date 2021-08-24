@@ -30,6 +30,21 @@ from datetime import datetime
 from pathlib import Path
 
 
+BakProps = namedtuple(
+    'BakProps', 'sort_key, full_name, file_name, base_name, datetime_tag'
+)
+
+
+ChangeProps = namedtuple(
+    'ChangeProps',
+    'sort_key, full_name, prev_full_name, datetime_tag, base_name,' +
+    'SKIP_Y, COMMIT_MESSAGE'
+)
+
+
+baks_dir = '~/Work/20200817_BackupRotation/_0_bak/'
+
+
 def main():
     write_debugging_files = True
     filename_include_dt = False
@@ -57,12 +72,6 @@ def main():
         sys.exit(1)
 
     output_path.mkdir()
-
-    baks_dir = '~/Work/20200817_BackupRotation/_0_bak/'
-
-    BakProps = namedtuple(
-        'BakProps', 'sort_key, full_name, file_name, base_name, datetime_tag'
-    )
 
     bak_files = Path(baks_dir).rglob('*.bak')
 
@@ -132,12 +141,6 @@ def main():
             for a in datetime_tags:
                 out_file.write(f"{a}\n")
 
-    ChangeProps = namedtuple(
-        'ChangeProps',
-        'sort_key, full_name, prev_full_name, datetime_tag, base_name,' +
-        'SKIP_Y, COMMIT_MESSAGE'
-    )
-
     changed_list = []
     prev_files = {}
 
@@ -189,9 +192,13 @@ def main():
 
     if filename_include_dt:
         output_base_name = 'out-1-files-changed-{0}.csv'.format(now_tag)
-        filename_out_files_changed = str(output_path.joinpath(output_base_name))
+        filename_out_files_changed = str(
+            output_path.joinpath(output_base_name)
+        )
     else:
-        filename_out_files_changed = str(output_path.joinpath('out-1-files-changed.csv'))
+        filename_out_files_changed = str(
+            output_path.joinpath('out-1-files-changed.csv')
+        )
 
     with open(filename_out_files_changed, 'w', newline='') as csv_file:
         writer = csv.writer(csv_file)
