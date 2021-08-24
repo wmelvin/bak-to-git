@@ -20,23 +20,43 @@
 #
 #  
 #
-#  2021-05-18
+#  2021-08-24
 # ---------------------------------------------------------------------
 
 import csv
+import sys
 from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
 
 
-def get_output_path(file_name):
-    return Path.cwd() / 'output' / file_name
-
-
 def main():
+    write_debugging_files = True
+    filename_include_dt = False
 
-    # baks_dir =
-    # '~/Work/20200817_BackupRotation/_0_bak/_older/20200831'
+    now_tag = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+    output_path = Path.cwd() / 'output'
+    #  The top-level output directory should exist.
+    if not output_path.exists():
+        sys.stderr.write(
+            "ERROR: Output directory does not exist: {0}\n".format(
+                output_path
+            )
+        )
+        sys.exit(1)
+
+    output_path = output_path.joinpath(now_tag)
+    #  The run-specific output sub-directory should not exist.
+    if output_path.exists():
+        sys.stderr.write(
+            "ERROR: Run-specific output directory exists: {0}\n".format(
+                output_path
+            )
+        )
+        sys.exit(1)
+
+    output_path.mkdir()
 
     baks_dir = '~/Work/20200817_BackupRotation/_0_bak/'
 
@@ -52,7 +72,7 @@ def main():
 
     #  The backup files, created by the wipbak.sh script, are named with
     #  a .date_time tag preceeding the .bak extension (suffix). For example,
-    #  're-git-1.py.20200905_105914.bak'.
+    #  'bak-to-git-1.py.20200905_105914.bak'.
 
     for f in bak_files:
         #  Path.stem returns the name without the suffix. Split the stem on '.'
@@ -78,11 +98,9 @@ def main():
     base_names.sort()
     datetime_tags.sort()
 
-    do_write_debugging_files = False
-
     #  Write all-files list for debugging.
-    if do_write_debugging_files:
-        filename_out_all = get_output_path('debug-1-all-files.csv')
+    if write_debugging_files:
+        filename_out_all = str(output_path.joinpath('debug-1-all-files.csv'))
         with open(filename_out_all, 'w', newline='') as csv_file:
             writer = csv.writer(csv_file)
             writer.writerow([
@@ -95,16 +113,20 @@ def main():
             writer.writerows(file_list)
 
     #  Write base-names list for debugging.
-    if do_write_debugging_files:
-        filename_out_base_names = get_output_path('debug-2-base_names.csv')
+    if write_debugging_files:
+        filename_out_base_names = str(
+            output_path.joinpath('debug-2-base_names.csv')
+        )
         with open(filename_out_base_names, 'w', newline='') as out_file:
             out_file.write("base_name\n")
             for a in base_names:
                 out_file.write(f"{a}\n")
 
     #  Write datetime-tags list for debugging.
-    if do_write_debugging_files:
-        filename_out_dt_tags = get_output_path('debug-3-datetime_tags.csv')
+    if write_debugging_files:
+        filename_out_dt_tags = str(
+            output_path.joinpath('debug-3-datetime_tags.csv')
+        )
         with open(filename_out_dt_tags, 'w', newline='') as out_file:
             out_file.write("datetime_tag\n")
             for a in datetime_tags:
@@ -165,10 +187,11 @@ def main():
 
     #  Write main output from step 1.
 
-    output_base_name = 'out-1-files-changed-{0}.csv'.format(
-        datetime.now().strftime('%Y%m%d_%H%M%S')
-    )
-    filename_out_files_changed = get_output_path(output_base_name)
+    if filename_include_dt:
+        output_base_name = 'out-1-files-changed-{0}.csv'.format(now_tag)
+        filename_out_files_changed = str(output_path.joinpath(output_base_name))
+    else:
+        filename_out_files_changed = str(output_path.joinpath('out-1-files-changed.csv'))
 
     with open(filename_out_files_changed, 'w', newline='') as csv_file:
         writer = csv.writer(csv_file)
