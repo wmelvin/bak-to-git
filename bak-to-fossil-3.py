@@ -19,51 +19,50 @@ import subprocess
 import sys
 from collections import namedtuple
 from datetime import datetime
-# from datetime import timedelta
 from pathlib import Path
 
 
-#  Specify input file.
-input_csv = Path.cwd() / 'prepare' / 'out-1-files-changed-UPLOAD-1-newpath.csv'
+# -- Target-specific configuration:
+
+input_csv = Path.cwd() / "prepare" / "out-1-files-changed-UPLOAD-1-newpath.csv"
 #  "-newpath" = Changed '/Work/' to '/Projects/' in file paths.
 
+fossil_repo = "bakrot.fossil"
 
-repo_dir = '~/Desktop/test/bakrot_fossil'
+fossil_init_date = "2020-08-17T11:20:00"
+#  First tag in csv: 20200817_112125
 
-log_name = Path.cwd() / 'log-bak-to-fossil-3.txt'
+repo_dir = "~/Desktop/test/bakrot_fossil"
 
-#  Set to False for debugging without actually running the SCM commands.
-#  This will still copy files to the repo directory.
-#
-do_run_scm = True
+# -- General configuration:
+
+do_run = True
+#  Set to False for debugging without actually running the fossil commands.
+#  This will still copy files to the repository directory.
 
 fossil_exe = "~/bin/fossil"
 
-fossil_repo = "bakrot-repo"
-
-#  First tag in csv: 20200817_112125
-fossil_init_date = "2020-08-17T11:20:00"
+log_name = Path.cwd() / "log-bak-to-fossil-3.txt"
 
 
 CommitProps = namedtuple(
-    'FileProps',
-    'sort_key, full_name, datetime_tag, base_name, commit_message'
+    "FileProps", "sort_key, full_name, datetime_tag, base_name, commit_message"
 )
 
 
 def write_log(msg):
     print(msg)
-    with open(log_name,  'a') as log_file:
+    with open(log_name, "a") as log_file:
         log_file.write(f"[{datetime.now():%Y%m%d_%H%M%S}] {msg}\n")
 
 
 def log_fmt(items):
-    s = ''
+    s = ""
     for item in items:
-        if ' ' in item:
+        if " " in item:
             s += f'"{item}" '
         else:
-            s += f'{item} '
+            s += f"{item} "
     return s.strip()
 
 
@@ -72,25 +71,25 @@ def get_date_string(dt_tag):
     #  Tag format: yyyymmdd_hhmmss
     #       index: 012345678901234
     #
-    iso_fmt = '{0}-{1}-{2}T{3}:{4}:{5}'.format(
+    iso_fmt = "{0}-{1}-{2}T{3}:{4}:{5}".format(
         dt_tag[:4],
         dt_tag[4:6],
         dt_tag[6:8],
         dt_tag[9:11],
         dt_tag[11:13],
-        dt_tag[13:]
+        dt_tag[13:],
     )
     commit_dt = datetime.fromisoformat(iso_fmt)
-    return commit_dt.strftime('%Y-%m-%dT%H:%M:%S')
+    return commit_dt.strftime("%Y-%m-%dT%H:%M:%S")
 
 
 def copy_filtered_content(src_name, dst_name):
-    with open(src_name, 'r') as src_file:
-        with open(dst_name, 'w') as dst_file:
+    with open(src_name, "r") as src_file:
+        with open(dst_name, "w") as dst_file:
             for line in src_file.readlines():
                 #  Filter out the email address I was using at the time.
-                s = line.replace('(**REDACTED**)', '')
-                s = s.replace('**REDACTED**', '')
+                s = line.replace("(**REDACTED**)", "")
+                s = s.replace("**REDACTED**", "")
                 dst_file.write(s)
 
 
@@ -102,10 +101,14 @@ def fossil_create_repo(repo_dir: str):
         sys.exit(1)
 
     cmds = [
-        fossil_exe, "init", fossil_repo, "--date-override", fossil_init_date
+        fossil_exe,
+        "init",
+        fossil_repo,
+        "--date-override",
+        fossil_init_date,
     ]
     write_log(f"RUN: {log_fmt(cmds)}")
-    if do_run_scm:
+    if do_run:
         result = subprocess.run(cmds, cwd=repo_dir)
         assert result.returncode == 0
 
@@ -113,13 +116,13 @@ def fossil_create_repo(repo_dir: str):
 def fossil_open_repo(repo_dir: str):
     cmds = [fossil_exe, "open", fossil_repo]
     write_log(f"RUN: {log_fmt(cmds)}")
-    if do_run_scm:
+    if do_run:
         result = subprocess.run(cmds, cwd=repo_dir)
         assert result.returncode == 0
 
 
 def main():
-    write_log('BEGIN')
+    write_log("BEGIN")
 
     target_path = Path(repo_dir).resolve()
 
@@ -134,16 +137,16 @@ def main():
     with open(input_csv) as csv_file:
         reader = csv.DictReader(csv_file)
         for row in reader:
-            if len(row['full_name']) > 0:
-                do_skip = str(row['SKIP_Y']).upper() == 'Y'
+            if len(row["full_name"]) > 0:
+                do_skip = str(row["SKIP_Y"]).upper() == "Y"
                 if not do_skip:
                     commit_list.append(
                         CommitProps(
-                            row['sort_key'],
-                            row['full_name'],
-                            row['datetime_tag'],
-                            row['base_name'],
-                            row['COMMIT_MESSAGE']
+                            row["sort_key"],
+                            row["full_name"],
+                            row["datetime_tag"],
+                            row["base_name"],
+                            row["COMMIT_MESSAGE"],
                         )
                     )
 
@@ -161,12 +164,12 @@ def main():
 
         commit_dt = get_date_string(dt_tag)
 
-        commit_msg = ''
+        commit_msg = ""
 
         for item in commit_list:
             if item.datetime_tag == dt_tag:
                 s = item.commit_message.strip()
-                if 0 < len(s) and not s.endswith('.'):
+                if 0 < len(s) and not s.endswith("."):
                     s += ". "
                 commit_msg += s
                 target_name = target_path / Path(item.base_name).name
@@ -180,10 +183,8 @@ def main():
 
                 if not existing_file:
                     cmds = [fossil_exe, "add", item.base_name]
-                    write_log(
-                        "({0}) RUN: {1}".format(item.datetime_tag, cmds)
-                    )
-                    if do_run_scm:
+                    write_log("({0}) RUN: {1}".format(item.datetime_tag, cmds))
+                    if do_run:
                         result = subprocess.run(cmds, cwd=target_path)
                         assert result.returncode == 0
 
@@ -192,26 +193,24 @@ def main():
         else:
             commit_msg = commit_msg.strip()
 
-        # print(f"Commit message: '{commit_msg}'\n")
-
         cmds = [
             fossil_exe,
             "commit",
             "-m",
             commit_msg,
             "--date-override",
-            commit_dt
+            commit_dt,
         ]
 
         write_log("({0}) RUN: {1}".format(dt_tag, log_fmt(cmds)))
 
-        if do_run_scm:
+        if do_run:
             result = subprocess.run(cmds, cwd=target_path)
             assert result.returncode == 0
 
-    write_log('END')
+    write_log("END")
 
-    print('Done (bak-to-fossil-3.py).')
+    print("Done (bak-to-fossil-3.py).")
 
 
 if __name__ == "__main__":

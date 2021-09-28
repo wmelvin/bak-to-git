@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------
 #  bak-to-git-1.py
 #
-#  This script uses backup files, created by my wipbak.sh, script to
+#  This script uses backup files, created by my wipbak.sh script, to
 #  build a series of git commits. This is for a project where the
 #  simple shell script was configured to make work-in-progress backups
 #  of the fiew files in the project. Git was not considered at the
@@ -13,6 +13,10 @@
 #  from the file names. Sort the list so the files changed in backups
 #  with the same date_time tag can be compared and commited as one
 #  commit. This step only builds the list and writes it to a CSV file.
+#
+#  When the output from this script is ready to use, the output file
+#  should be copied or moved to a new location to use for step 2.
+#  That will keep work-in-progress separate from new outputs.
 #
 #  In step 2, the files will be compared so commit messages can be
 #  entered in the CSV file. Files can also be skipped so changes can
@@ -31,33 +35,31 @@ from pathlib import Path
 
 
 BakProps = namedtuple(
-    'BakProps', 'sort_key, full_name, file_name, base_name, datetime_tag'
+    "BakProps", "sort_key, full_name, file_name, base_name, datetime_tag"
 )
 
 
 ChangeProps = namedtuple(
-    'ChangeProps',
-    'sort_key, full_name, prev_full_name, datetime_tag, base_name,' +
-    'SKIP_Y, COMMIT_MESSAGE'
+    "ChangeProps",
+    "sort_key, full_name, prev_full_name, datetime_tag, base_name,"
+    + "SKIP_Y, COMMIT_MESSAGE",
 )
 
 
-baks_dir = '~/Work/20200817_BackupRotation/_0_bak/'
+baks_dir = "~/Work/20200817_BackupRotation/_0_bak/"
 
 
 def main():
     write_debugging_files = True
     filename_include_dt = False
 
-    now_tag = datetime.now().strftime('%Y%m%d_%H%M%S')
+    now_tag = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    output_path = Path.cwd() / 'output'
+    output_path = Path.cwd() / "output"
     #  The top-level output directory should exist.
     if not output_path.exists():
         sys.stderr.write(
-            "ERROR: Output directory does not exist: {0}\n".format(
-                output_path
-            )
+            "ERROR: Output directory does not exist: {0}\n".format(output_path)
         )
         sys.exit(1)
 
@@ -73,7 +75,7 @@ def main():
 
     output_path.mkdir()
 
-    bak_files = Path(baks_dir).rglob('*.bak')
+    bak_files = Path(baks_dir).rglob("*.bak")
 
     file_list = []
     datetime_tags = []
@@ -89,8 +91,8 @@ def main():
         #
         full_name = str(f)
         file_name = f.name
-        datetime_tag = f.stem.split('.')[-1:][0]
-        base_name = '.'.join(f.name.split('.')[:-2])
+        datetime_tag = f.stem.split(".")[-1:][0]
+        base_name = ".".join(f.name.split(".")[:-2])
         sort_key = f"{datetime_tag}:{base_name}"
 
         file_list.append(
@@ -109,24 +111,26 @@ def main():
 
     #  Write all-files list for debugging.
     if write_debugging_files:
-        filename_out_all = str(output_path.joinpath('debug-1-all-files.csv'))
-        with open(filename_out_all, 'w', newline='') as csv_file:
+        filename_out_all = str(output_path.joinpath("debug-1-all-files.csv"))
+        with open(filename_out_all, "w", newline="") as csv_file:
             writer = csv.writer(csv_file)
-            writer.writerow([
-                'sort_key',
-                'full_name',
-                'file_name',
-                'base_name',
-                'datetime_tag'
-            ])
+            writer.writerow(
+                [
+                    "sort_key",
+                    "full_name",
+                    "file_name",
+                    "base_name",
+                    "datetime_tag",
+                ]
+            )
             writer.writerows(file_list)
 
     #  Write base-names list for debugging.
     if write_debugging_files:
         filename_out_base_names = str(
-            output_path.joinpath('debug-2-base_names.csv')
+            output_path.joinpath("debug-2-base_names.csv")
         )
-        with open(filename_out_base_names, 'w', newline='') as out_file:
+        with open(filename_out_base_names, "w", newline="") as out_file:
             out_file.write("base_name\n")
             for a in base_names:
                 out_file.write(f"{a}\n")
@@ -134,9 +138,9 @@ def main():
     #  Write datetime-tags list for debugging.
     if write_debugging_files:
         filename_out_dt_tags = str(
-            output_path.joinpath('debug-3-datetime_tags.csv')
+            output_path.joinpath("debug-3-datetime_tags.csv")
         )
-        with open(filename_out_dt_tags, 'w', newline='') as out_file:
+        with open(filename_out_dt_tags, "w", newline="") as out_file:
             out_file.write("datetime_tag\n")
             for a in datetime_tags:
                 out_file.write(f"{a}\n")
@@ -164,8 +168,8 @@ def main():
                             prev_props.full_name,
                             t.datetime_tag,
                             t.base_name,
-                            '',
-                            ''
+                            "",
+                            "",
                         )
                     )
                     prev_files[t.base_name] = t
@@ -175,45 +179,51 @@ def main():
                     ChangeProps(
                         t.sort_key,
                         t.full_name,
-                        '',
+                        "",
                         t.datetime_tag,
                         t.base_name,
-                        '',
-                        ''
+                        "",
+                        "",
                     )
                 )
                 prev_files[t.base_name] = t
 
         #  Insert a blank row between each datetime_tag to make it more
         #  obvious which files will be grouped in a commit.
-        changed_list.append(ChangeProps('', '', '', '', '', '', ''))
+        changed_list.append(ChangeProps("", "", "", "", "", "", ""))
 
     #  Write main output from step 1.
 
     if filename_include_dt:
-        output_base_name = 'out-1-files-changed-{0}.csv'.format(now_tag)
+        output_base_name = "out-1-files-changed-{0}.csv".format(now_tag)
         filename_out_files_changed = str(
             output_path.joinpath(output_base_name)
         )
     else:
         filename_out_files_changed = str(
-            output_path.joinpath('out-1-files-changed.csv')
+            output_path.joinpath("out-1-files-changed.csv")
         )
 
-    with open(filename_out_files_changed, 'w', newline='') as csv_file:
+    with open(filename_out_files_changed, "w", newline="") as csv_file:
         writer = csv.writer(csv_file)
 
         #  Add columns, 'SKIP_Y' and 'COMMIT_MESSAGE', to populate
         #  manually in next step.
-        writer.writerow([
-            'sort_key', 'full_name', 'prev_full_name',
-            'datetime_tag', 'base_name',
-            'SKIP_Y', 'COMMIT_MESSAGE'
-        ])
+        writer.writerow(
+            [
+                "sort_key",
+                "full_name",
+                "prev_full_name",
+                "datetime_tag",
+                "base_name",
+                "SKIP_Y",
+                "COMMIT_MESSAGE",
+            ]
+        )
 
         writer.writerows(changed_list)
 
-    print('Done (bak-to-git-1.py).')
+    print("Done (bak-to-git-1.py).")
 
 
 if __name__ == "__main__":
