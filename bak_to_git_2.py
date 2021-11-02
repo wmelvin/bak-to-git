@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # ---------------------------------------------------------------------
-#  bak-to-git-2.py
+#  bak_to_git_2.py
 #
 #  Step 2: Read a CSV file, created in step 1, and launch the 'Beyond
 #  Compare' file differencing tool to see changes.
@@ -11,7 +11,7 @@
 #  Manually add commit messages to the CSV file, and select files to
 #  skip to batch changes into a single commit.
 #
-#  
+#  William Melvin
 #
 #  2021-08-24
 # ---------------------------------------------------------------------
@@ -89,7 +89,7 @@ def main():
                         else:
                             prevs[base_name] = row["full_name"]
 
-    print("Done (bak-to-git-2.py).")
+    print("Done (bak_to_git_2.py).")
 
 
 if __name__ == "__main__":

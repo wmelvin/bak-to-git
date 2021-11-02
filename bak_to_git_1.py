@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # ---------------------------------------------------------------------
-#  bak-to-git-1.py
+#  bak_to_git_1.py
 #
 #  This script uses backup files, created by my wipbak.sh script, to
 #  build a series of git commits. This is for a project where the
@@ -22,13 +22,14 @@
 #  entered in the CSV file. Files can also be skipped so changes can
 #  be batched into a single commit.
 #
-#  
+#  William Melvin
 #
 #  2021-08-24
 # ---------------------------------------------------------------------
 
 import csv
 import sys
+
 from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
@@ -83,7 +84,7 @@ def main():
 
     #  The backup files, created by the wipbak.sh script, are named with
     #  a .date_time tag preceeding the .bak extension (suffix). For example,
-    #  'bak-to-git-1.py.20200905_105914.bak'.
+    #  'bak_to_git_1.py.20200905_105914.bak'.
 
     for f in bak_files:
         #  Path.stem returns the name without the suffix. Split the stem on '.'
@@ -223,7 +224,7 @@ def main():
 
         writer.writerows(changed_list)
 
-    print("Done (bak-to-git-1.py).")
+    print("Done (bak_to_git_1.py).")
 
 
 if __name__ == "__main__":
