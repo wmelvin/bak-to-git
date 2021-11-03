@@ -3,36 +3,20 @@
 # ---------------------------------------------------------------------
 #  bak_to_git_1.py
 #
-#  This script uses backup files, created by my wipbak.sh script, to
-#  build a series of git commits. This is for a project where the
-#  simple shell script was configured to make work-in-progress backups
-#  of the fiew files in the project. Git was not considered at the
-#  start, so this is an attempt to back(up) into a commit history.
-#
-#  Step 1: Build a list of backup files and extract the date_time tags
-#  from the file names. Sort the list so the files changed in backups
-#  with the same date_time tag can be compared and commited as one
-#  commit. This step only builds the list and writes it to a CSV file.
-#
-#  When the output from this script is ready to use, the output file
-#  should be copied or moved to a new location to use for step 2.
-#  That will keep work-in-progress separate from new outputs.
-#
-#  In step 2, the files will be compared so commit messages can be
-#  entered in the CSV file. Files can also be skipped so changes can
-#  be batched into a single commit.
-#
-#  William Melvin
-#
-#  2021-08-24
 # ---------------------------------------------------------------------
 
+import argparse
 import csv
 import sys
 
 from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
+
+
+AppOptions = namedtuple(
+    "AppOptions", "source_dir, output_dir, include_dt, write_debug"
+)
 
 
 BakProps = namedtuple(
@@ -47,16 +31,66 @@ ChangeProps = namedtuple(
 )
 
 
-baks_dir = "~/Work/20200817_BackupRotation/_0_bak/"
+def get_opts(argv) -> AppOptions:
+
+    ap = argparse.ArgumentParser(
+        description="Read 'wipbak' files and write a 'csv' file."
+    )
+    # TODO: Expand description.
+
+    ap.add_argument(
+        "source_dir",
+        action="store",
+        help="Source directory containing the *.bak files created by "
+        + "'wipbak'.",
+    )
+
+    ap.add_argument(
+        "--output-dir",
+        dest="output_dir",
+        action="store",
+        help="Name of output directory, which must already exist.",
+    )
+
+    ap.add_argument(
+        "--timestamp",
+        dest="include_dt",
+        action="store_true",
+        help="Include a date_time stamp in the output file names."
+    )
+
+    ap.add_argument(
+        "--write-debug",
+        dest="write_debug",
+        action="store_true",
+        help="Write files containing additional details useful for debugging."
+    )
+
+    args = ap.parse_args(argv[1:])
+
+    opts = AppOptions(
+        args.source_dir,
+        args.output_dir,
+        args.include_dt,
+        args.write_debug,
+    )
+
+    assert Path(opts.source_dir).exists()
+    assert Path(opts.source_dir).is_dir()
+
+    return opts
 
 
-def main():
-    write_debugging_files = True
-    filename_include_dt = False
-
+def main(argv):
     now_tag = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    output_path = Path.cwd() / "output"
+    opts = get_opts(argv)
+
+    if opts.output_dir is None or len(opts.output_dir) == 0:
+        output_path = Path.cwd() / "output"
+    else:
+        output_path = Path(opts.output_dir)
+
     #  The top-level output directory should exist.
     if not output_path.exists():
         sys.stderr.write(
@@ -76,7 +110,7 @@ def main():
 
     output_path.mkdir()
 
-    bak_files = Path(baks_dir).rglob("*.bak")
+    bak_files = Path(opts.source_dir).rglob("*.bak")
 
     file_list = []
     datetime_tags = []
@@ -111,7 +145,7 @@ def main():
     datetime_tags.sort()
 
     #  Write all-files list for debugging.
-    if write_debugging_files:
+    if opts.write_debug:
         filename_out_all = str(output_path.joinpath("debug-1-all-files.csv"))
         with open(filename_out_all, "w", newline="") as csv_file:
             writer = csv.writer(csv_file)
@@ -127,7 +161,7 @@ def main():
             writer.writerows(file_list)
 
     #  Write base-names list for debugging.
-    if write_debugging_files:
+    if opts.write_debug:
         filename_out_base_names = str(
             output_path.joinpath("debug-2-base_names.csv")
         )
@@ -137,7 +171,7 @@ def main():
                 out_file.write(f"{a}\n")
 
     #  Write datetime-tags list for debugging.
-    if write_debugging_files:
+    if opts.write_debug:
         filename_out_dt_tags = str(
             output_path.joinpath("debug-3-datetime_tags.csv")
         )
@@ -195,7 +229,7 @@ def main():
 
     #  Write main output from step 1.
 
-    if filename_include_dt:
+    if opts.include_dt:
         output_base_name = "out-1-files-changed-{0}.csv".format(now_tag)
         filename_out_files_changed = str(
             output_path.joinpath(output_base_name)
@@ -227,5 +261,5 @@ def main():
     print("Done (bak_to_git_1.py).")
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
