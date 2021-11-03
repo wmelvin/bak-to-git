@@ -3,41 +3,30 @@
 # ---------------------------------------------------------------------
 #  bak_to_git_3.py
 #
-#  Step 3: Read a CSV file edited in step 2 where commit messages are
-#  added and files to be skipped are flagged.
-#
-#  Run git to commit each change with the specified date and time.
-#
-#  William Melvin
-#
-#  2021-08-24
 # ---------------------------------------------------------------------
 
+import argparse
 import csv
 import subprocess
+import sys
+
 from collections import namedtuple
 from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
 
+
+AppOptions = namedtuple("AppOptions", "input_csv, repo_dir, do_commit")
+
+
 # -- Target-specific configuration:
 
-# input_csv = Path.cwd() / 'test' / 'out-1-files-changed-TEST-1.csv'
-# input_csv = Path.cwd() / 'output' / 'out-1-files-changed-EDIT.csv'
-# input_csv = Path.cwd() / 'output' / 'out-1-files-changed.csv'
-# input_csv = Path.cwd() / 'prepare' / 'out-1-files-changed-EDIT.csv'
 
-# input_csv = Path.cwd() / 'prepare' / 'out-1-files-changed-UPLOAD-1.csv'
-# input_csv = Path.cwd() / 'prepare' / 'out-1-files-changed-UPLOAD-2.csv'
-
-input_csv = Path.cwd() / "prepare" / "out-1-files-changed-UPLOAD-1-newpath.csv"
-#  Changed '/Work/' to '/Projects/' in file paths.
-
-repo_dir = "~/Desktop/test/bakrot_repo"
+# repo_dir = "~/Desktop/test/bakrot_repo"
 
 # -- General configuration:
 
-do_run = True
+# do_run = False
 #  Set to False for debugging without actually running git commands.
 #  This will still copy files to the repo directory.
 
@@ -103,14 +92,66 @@ def copy_filtered_content(src_name, dst_name):
                 dst_file.write(s)
 
 
-def main():
+def get_opts(argv) -> AppOptions:
+
+    ap = argparse.ArgumentParser(description="BakToGit - step 3: ...")
+    # TODO: Fill in description.
+
+    ap.add_argument(
+        "input_csv",
+        action="store",
+        help="Path to CSV file, manually edited in step 2 to add commit "
+        + "messages.",
+    )
+
+    ap.add_argument(
+        "repo_dir",
+        action="store",
+        help="Path to repository directory. This should be a new repository, "
+        + "or one where the first commit from the wipbak files is an "
+        + "appropriate next commit.",
+    )
+
+    ap.add_argument(
+        "--do-commit",
+        dest="do_commit",
+        action="store_true",
+        help="Copy files to the repository and run the git command to commit "
+        + "changes. By default, this application runs in 'what-if' mode "
+        + "where changes are listed but not applied.",
+    )
+
+    args = ap.parse_args(argv[1:])
+
+    opts = AppOptions(args.input_csv, args.repo_dir, args.do_commit)
+
+    p = Path(opts.input_csv)
+    if not (p.exists() and p.is_file()):
+        sys.stderr.write(f"ERROR: File not found: '{p}'")
+        sys.exit(1)
+
+    d = Path(opts.repo_dir)
+    if not (d.exists() and d.is_dir()):
+        sys.stderr.write(f"ERROR: Directory not found: '{d}'")
+        sys.exit(1)
+
+    if not d.joinpath(".git").exists():
+        sys.stderr.write(f"ERROR: Git repository directory not found in '{d}'")
+        sys.exit(1)
+
+    return opts
+
+
+def main(argv):
     write_log("BEGIN")
+
+    opts = get_opts(argv)
 
     commit_list = []
 
-    write_log(f"Read {input_csv}")
+    write_log(f"Read {opts.input_csv}")
 
-    with open(input_csv) as csv_file:
+    with open(opts.input_csv) as csv_file:
         reader = csv.DictReader(csv_file)
         for row in reader:
             if len(row["full_name"]) > 0:
@@ -135,7 +176,7 @@ def main():
 
     datetime_tags.sort()
 
-    target_path = Path(repo_dir).resolve()
+    target_path = Path(opts.repo_dir).resolve()
 
     for dt_tag in datetime_tags:
         print(dt_tag)
@@ -146,6 +187,7 @@ def main():
             "GIT_COMMITTER_DATE": commit_dt,
             "GIT_AUTHOR_DATE": author_dt,
         }
+        write_log(f"GIT ENV {git_env}")
 
         commit_msg = ""
 
@@ -158,11 +200,12 @@ def main():
                 target_name = target_path / Path(item.base_name).name
                 existing_file = Path(target_name).exists()
 
-                print(f"COPY {item.full_name}")
-                print(f"  TO {target_name}")
+                write_log(f"COPY {item.full_name}")
+                write_log(f"  TO {target_name}")
 
-                #  Copy file to target repo location.
-                copy_filtered_content(item.full_name, target_name)
+                if opts.do_commit:
+                    #  Copy file to target repo location.
+                    copy_filtered_content(item.full_name, target_name)
 
                 if not existing_file:
                     cmds = ["git", "add", item.base_name]
@@ -171,7 +214,7 @@ def main():
                             item.datetime_tag, log_fmt(cmds)
                         )
                     )
-                    if do_run:
+                    if opts.do_commit:
                         result = subprocess.run(
                             cmds, cwd=target_path, env=git_env
                         )
@@ -186,7 +229,7 @@ def main():
 
         write_log("({0}) RUN: {1}".format(dt_tag, log_fmt(cmds)))
 
-        if do_run:
+        if opts.do_commit:
             result = subprocess.run(cmds, cwd=target_path, env=git_env)
             assert result.returncode == 0
 
@@ -196,4 +239,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main(sys.argv))
