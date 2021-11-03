@@ -26,7 +26,7 @@ BakProps = namedtuple(
 
 ChangeProps = namedtuple(
     "ChangeProps",
-    "sort_key, full_name, prev_full_name, datetime_tag, base_name,"
+    "row_num, sort_key, full_name, prev_full_name, datetime_tag, base_name,"
     + "SKIP_Y, COMMIT_MESSAGE",
 )
 
@@ -89,7 +89,7 @@ def main(argv):
     if opts.output_dir is None or len(opts.output_dir) == 0:
         output_path = Path.cwd() / "output"
     else:
-        output_path = Path(opts.output_dir)
+        output_path = Path(opts.output_dir).expanduser().resolve()
 
     #  The top-level output directory should exist.
     if not output_path.exists():
@@ -99,7 +99,8 @@ def main(argv):
         sys.exit(1)
 
     output_path = output_path.joinpath(now_tag)
-    #  The run-specific output sub-directory should not exist.
+
+    #  The run-specific output sub-directory should not exist at this point.
     if output_path.exists():
         sys.stderr.write(
             "ERROR: Run-specific output directory exists: {0}\n".format(
@@ -109,6 +110,8 @@ def main(argv):
         sys.exit(1)
 
     output_path.mkdir()
+
+    assert output_path.exists()
 
     bak_files = Path(opts.source_dir).rglob("*.bak")
 
@@ -146,7 +149,7 @@ def main(argv):
 
     #  Write all-files list for debugging.
     if opts.write_debug:
-        filename_out_all = str(output_path.joinpath("debug-1-all-files.csv"))
+        filename_out_all = str(output_path.joinpath("z-debug-1-all-files.csv"))
         with open(filename_out_all, "w", newline="") as csv_file:
             writer = csv.writer(csv_file)
             writer.writerow(
@@ -163,7 +166,7 @@ def main(argv):
     #  Write base-names list for debugging.
     if opts.write_debug:
         filename_out_base_names = str(
-            output_path.joinpath("debug-2-base_names.csv")
+            output_path.joinpath("z-debug-2-base_names.csv")
         )
         with open(filename_out_base_names, "w", newline="") as out_file:
             out_file.write("base_name\n")
@@ -173,7 +176,7 @@ def main(argv):
     #  Write datetime-tags list for debugging.
     if opts.write_debug:
         filename_out_dt_tags = str(
-            output_path.joinpath("debug-3-datetime_tags.csv")
+            output_path.joinpath("z-debug-3-datetime_tags.csv")
         )
         with open(filename_out_dt_tags, "w", newline="") as out_file:
             out_file.write("datetime_tag\n")
@@ -181,6 +184,7 @@ def main(argv):
                 out_file.write(f"{a}\n")
 
     changed_list = []
+    row_num = 0
     prev_files = {}
 
     for dt in datetime_tags:
@@ -196,8 +200,10 @@ def main(argv):
                 this_content = Path(t.full_name).read_text()
                 if prev_content != this_content:
                     #  file changed
+                    row_num += 1
                     changed_list.append(
                         ChangeProps(
+                            row_num,
                             t.sort_key,
                             t.full_name,
                             prev_props.full_name,
@@ -210,8 +216,10 @@ def main(argv):
                     prev_files[t.base_name] = t
             else:
                 #  new file
+                row_num += 1
                 changed_list.append(
                     ChangeProps(
+                        row_num,
                         t.sort_key,
                         t.full_name,
                         "",
@@ -225,18 +233,19 @@ def main(argv):
 
         #  Insert a blank row between each datetime_tag to make it more
         #  obvious which files will be grouped in a commit.
-        changed_list.append(ChangeProps("", "", "", "", "", "", ""))
+        row_num += 1
+        changed_list.append(ChangeProps(row_num, "", "", "", "", "", "", ""))
 
     #  Write main output from step 1.
 
     if opts.include_dt:
-        output_base_name = "out-1-files-changed-{0}.csv".format(now_tag)
+        output_base_name = "step-1-files-changed-{0}.csv".format(now_tag)
         filename_out_files_changed = str(
             output_path.joinpath(output_base_name)
         )
     else:
         filename_out_files_changed = str(
-            output_path.joinpath("out-1-files-changed.csv")
+            output_path.joinpath("step-1-files-changed.csv")
         )
 
     with open(filename_out_files_changed, "w", newline="") as csv_file:
@@ -246,6 +255,7 @@ def main(argv):
         #  manually in next step.
         writer.writerow(
             [
+                "row",
                 "sort_key",
                 "full_name",
                 "prev_full_name",
