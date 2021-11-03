@@ -19,13 +19,7 @@ from pathlib import Path
 AppOptions = namedtuple("AppOptions", "input_csv, skip_backup")
 
 
-#  Specify input file.
-# input_csv = Path.cwd() / 'output' / 'out-1-files-changed.csv'
-# input_csv = Path.cwd() / 'test' / 'out-1-files-changed-TEST-1.csv'
-# input_csv = Path.cwd() / "prepare" / "out-1-files-changed-EDIT.csv"
-
-
-def run_bc(left_file, right_file):
+def run_bcompare(left_file, right_file):
     print(f"\nCompare\n  L: {left_file}\n  R: {right_file}\n")
 
     result = subprocess.run(["bcompare", left_file, right_file])
@@ -61,7 +55,7 @@ def get_opts(argv) -> AppOptions:
         dest="skip_backup",
         action="store_true",
         help="Do not create a backup of the input CSV file. By default a "
-        + "backup copy is created at the start of a session."
+        + "backup copy is created at the start of a session.",
     )
 
     args = ap.parse_args(argv[1:])
@@ -118,7 +112,9 @@ def main(argv):
                     if not force_skip:
                         if no_msg or force_no_skip:
                             if base_name in prevs.keys():
-                                run_bc(prevs[base_name], row["full_name"])
+                                run_bcompare(
+                                    prevs[base_name], row["full_name"]
+                                )
                             else:
                                 if len(row["prev_full_name"]) == 0:
                                     print(f"New file: {base_name}")
@@ -127,7 +123,7 @@ def main(argv):
                                 else:
                                     warning = "UNEXPECTED PREVIOUS VERSION"
                                     print(f"{warning}: {base_name}")
-                                    run_bc(
+                                    run_bcompare(
                                         row["prev_full_name"], row["full_name"]
                                     )
 
