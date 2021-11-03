@@ -3,38 +3,94 @@
 # ---------------------------------------------------------------------
 #  bak_to_git_2.py
 #
-#  Step 2: Read a CSV file, created in step 1, and launch the 'Beyond
-#  Compare' file differencing tool to see changes.
-#
-#  This script does not write any output files.
-#
-#  Manually add commit messages to the CSV file, and select files to
-#  skip to batch changes into a single commit.
-#
-#  William Melvin
-#
-#  2021-08-24
 # ---------------------------------------------------------------------
 
+import argparse
 import csv
+import shutil
 import subprocess
+import sys
+
+from collections import namedtuple
+from datetime import datetime
 from pathlib import Path
+
+
+AppOptions = namedtuple("AppOptions", "input_csv, skip_backup")
 
 
 #  Specify input file.
 # input_csv = Path.cwd() / 'output' / 'out-1-files-changed.csv'
 # input_csv = Path.cwd() / 'test' / 'out-1-files-changed-TEST-1.csv'
-input_csv = Path.cwd() / "prepare" / "out-1-files-changed-EDIT.csv"
+# input_csv = Path.cwd() / "prepare" / "out-1-files-changed-EDIT.csv"
 
 
 def run_bc(left_file, right_file):
     print("Compare\n  L: {0}\n  R: {1}".format(left_file, right_file))
-    subprocess.run(["bcompare", left_file, right_file])
+
+    result = subprocess.run(["bcompare", left_file, right_file])
+
+    assert result.returncode in [0, 1, 2, 11, 12, 13]
+    #  bcompare return codes:
+    #    Code  Meaning
+    #       0  Success
+    #       1  Binary same
+    #       2  Rules-based same
+    #      11  Binary differences
+    #      12  Similar
+    #      13  Rules-based differences
 
 
-def main():
+def get_opts(argv) -> AppOptions:
+
+    ap = argparse.ArgumentParser(
+        description="BakToGit - step 2: Run Beyond Compare (bcompare) to "
+        + "review source file changes between 'wipbak' backups. This is"
+        + "to be used along with manually editing the CSV file to set "
+        + "the 'SKIP_Y' and 'COMMIT_MESSAGE' columns."
+    )
+
+    ap.add_argument(
+        "input_csv",
+        action="store",
+        help="Path to CSV file created by bak_to_git_1.py.",
+    )
+
+    ap.add_argument(
+        "--no-backup",
+        dest="skip_backup",
+        action="store_true",
+        help="Do not create a backup of the input CSV file. By default a "
+        + "backup copy is created at the start."
+    )
+
+    args = ap.parse_args(argv[1:])
+
+    opts = AppOptions(args.input_csv, args.skip_backup)
+
+    assert Path(opts.input_csv).exists()
+    assert Path(opts.input_csv).is_file()
+
+    return opts
+
+
+def main(argv):
+    now_tag = datetime.now().strftime("%y%m%d_%H%M%S")
+
+    opts = get_opts(argv)
+
+    if not opts.skip_backup:
+        #  Make a backup of the input_csv in case there are problems while
+        #  manually editing the file.
+        bak_suffix = f".{now_tag}.bak"
+        p = Path(opts.input_csv)
+        bak_path = p.with_name(f"z-{p.name}").with_suffix(bak_suffix)
+        assert not bak_path.exists()
+        print(f"\nSaving backup as '{bak_path.name}'\n")
+        shutil.copyfile(opts.input_csv, bak_path)
+
     prevs = {}
-    with open(input_csv) as csv_file:
+    with open(opts.input_csv) as csv_file:
         reader = csv.DictReader(csv_file)
         for row in reader:
             if len(row["sort_key"]) > 0:
@@ -93,4 +149,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main(sys.argv))
