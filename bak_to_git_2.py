@@ -26,7 +26,7 @@ AppOptions = namedtuple("AppOptions", "input_csv, skip_backup")
 
 
 def run_bc(left_file, right_file):
-    print("Compare\n  L: {0}\n  R: {1}".format(left_file, right_file))
+    print(f"\nCompare\n  L: {left_file}\n  R: {right_file}\n")
 
     result = subprocess.run(["bcompare", left_file, right_file])
 
@@ -57,11 +57,11 @@ def get_opts(argv) -> AppOptions:
     )
 
     ap.add_argument(
-        "--no-backup",
+        "--skip-backup",
         dest="skip_backup",
         action="store_true",
         help="Do not create a backup of the input CSV file. By default a "
-        + "backup copy is created at the start."
+        + "backup copy is created at the start of a session."
     )
 
     args = ap.parse_args(argv[1:])
