@@ -16,21 +16,10 @@ from datetime import timedelta
 from pathlib import Path
 
 
-AppOptions = namedtuple("AppOptions", "input_csv, repo_dir, do_commit")
+AppOptions = namedtuple("AppOptions", "input_csv, repo_dir, log_dir")
 
 
-# -- Target-specific configuration:
-
-
-# repo_dir = "~/Desktop/test/bakrot_repo"
-
-# -- General configuration:
-
-# do_run = False
-#  Set to False for debugging without actually running git commands.
-#  This will still copy files to the repo directory.
-
-log_name = Path.cwd() / "log-bak_to_git_3.txt"
+log_path = Path.cwd() / "log-bak_to_git_3.txt"
 
 
 CommitProps = namedtuple(
@@ -40,7 +29,7 @@ CommitProps = namedtuple(
 
 def write_log(msg):
     print(msg)
-    with open(log_name, "a") as log_file:
+    with open(log_path, "a") as log_file:
         log_file.write(f"[{datetime.now():%Y%m%d_%H%M%S}] {msg}\n")
 
 
@@ -113,17 +102,15 @@ def get_opts(argv) -> AppOptions:
     )
 
     ap.add_argument(
-        "--do-commit",
-        dest="do_commit",
-        action="store_true",
-        help="Copy files to the repository and run the git command to commit "
-        + "changes. By default, this application runs in 'what-if' mode "
-        + "where changes are listed but not applied.",
+        "--log-dir",
+        dest="log_dir",
+        action="store",
+        help="Output directory for log files.",
     )
 
     args = ap.parse_args(argv[1:])
 
-    opts = AppOptions(args.input_csv, args.repo_dir, args.do_commit)
+    opts = AppOptions(args.input_csv, args.repo_dir, args.log_dir)
 
     p = Path(opts.input_csv)
     if not (p.exists() and p.is_file()):
@@ -139,13 +126,36 @@ def get_opts(argv) -> AppOptions:
         sys.stderr.write(f"ERROR: Git repository directory not found in '{d}'")
         sys.exit(1)
 
+    if opts.log_dir is not None:
+        if not Path(opts.log_dir).exists():
+            sys.stderr.write(
+                f"ERROR: Log directory not found '{opts.log_dir}'"
+            )
+            sys.exit(1)
+
     return opts
 
 
 def main(argv):
+    opts = get_opts(argv)
+
+    global log_path
+    if opts.log_dir is not None:
+        log_path = (
+            Path(opts.log_dir).expanduser().resolve().joinpath(log_path.name)
+        )
+
     write_log("BEGIN")
 
-    opts = get_opts(argv)
+    answer = input(
+        "Commit to repository (otherwise run in 'what-if' mode) [N,y]? "
+    )
+    if answer.lower() == "y":
+        do_commit = True
+        write_log("MODE: COMMIT")
+    else:
+        do_commit = False
+        write_log("MODE: What-if (actions logged, repository not affected)")
 
     commit_list = []
 
@@ -203,7 +213,7 @@ def main(argv):
                 write_log(f"COPY {item.full_name}")
                 write_log(f"  TO {target_name}")
 
-                if opts.do_commit:
+                if do_commit:
                     #  Copy file to target repo location.
                     copy_filtered_content(item.full_name, target_name)
 
@@ -214,7 +224,7 @@ def main(argv):
                             item.datetime_tag, log_fmt(cmds)
                         )
                     )
-                    if opts.do_commit:
+                    if do_commit:
                         result = subprocess.run(
                             cmds, cwd=target_path, env=git_env
                         )
@@ -229,7 +239,7 @@ def main(argv):
 
         write_log("({0}) RUN: {1}".format(dt_tag, log_fmt(cmds)))
 
-        if opts.do_commit:
+        if do_commit:
             result = subprocess.run(cmds, cwd=target_path, env=git_env)
             assert result.returncode == 0
 
