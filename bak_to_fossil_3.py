@@ -3,13 +3,20 @@
 # ---------------------------------------------------------------------
 #  bak_to_fossil_3.py
 #
-#  Step 3: Read a CSV file edited in step 2 where commit messages are
-#  added and files to be skipped are flagged.
+#  Step 3 (alternate): Read data from a CSV file that was edited in
+#  step 2, where commit messages were added and files to be skipped
+#  were flagged.  Run fossil (instead of git) to commit each change
+#  with the specified date and time.
 #
-#  Run fossil (instead of git) to commit each change with the
-#  specified date and time.
+#  This script is only for the initial creation and population of a new
+#  (empty) Fossil repository.
 #
-#  William Melvin
+#  The Fossil repository file is created (fossil init) by this script.
+#  It must not already exist.
+#
+#  The directory for the repository will be created by this script if
+#  it does not exist.
+#
 # ---------------------------------------------------------------------
 
 import argparse
@@ -79,12 +86,6 @@ def copy_filtered_content(src_name, dst_name):
                 dst_file.write(s)
 
 
-# def save_repo_init_log(repo_dir, result_stdout):
-#     # file_path = Path(repo_dir).parent / "create_repo_stdout.txt"
-#     file_path = Path().cwd() / "fossil_init_stdout.txt"
-#     file_path.write_text(result_stdout)
-
-
 def fossil_create_repo(opts: AppOptions, do_run: bool):
     d = Path(opts.repo_dir)
     p = d.joinpath(opts.repo_name)
@@ -114,7 +115,7 @@ def fossil_create_repo(opts: AppOptions, do_run: bool):
             stderr=subprocess.STDOUT,
             text=True,
         )
-        write_log(f"STDOUT:\n{result.stdout}\n")
+        write_log(f"STDOUT: {result.stdout.strip()}")
         assert result.returncode == 0
 
 
@@ -129,7 +130,7 @@ def fossil_open_repo(opts: AppOptions, do_run: bool):
             stderr=subprocess.STDOUT,
             text=True,
         )
-        write_log(f"STDOUT:\n{result.stdout}\n")
+        write_log(f"STDOUT: {result.stdout.strip()}")
         assert result.returncode == 0
 
 
@@ -215,11 +216,6 @@ def get_opts(argv) -> AppOptions:
     if not (p.exists() and p.is_file()):
         sys.stderr.write(f"ERROR: File not found: '{p}'")
         sys.exit(1)
-
-    # d = Path(opts.repo_dir)
-    # if not (d.exists() and d.is_dir()):
-    #     sys.stderr.write(f"ERROR: Directory not found: '{d}'")
-    #     sys.exit(1)
 
     if opts.log_dir is not None:
         if not Path(opts.log_dir).exists():
@@ -326,7 +322,7 @@ def main(argv):
                             stderr=subprocess.STDOUT,
                             text=True,
                         )
-                        write_log(f"STDOUT:\n{result.stdout}\n")
+                        write_log(f"STDOUT: {result.stdout.strip()}")
                         assert result.returncode == 0
 
         if len(commit_msg) == 0:
@@ -353,7 +349,7 @@ def main(argv):
                 stderr=subprocess.STDOUT,
                 text=True,
             )
-            write_log(f"STDOUT:\n{result.stdout}\n")
+            write_log(f"STDOUT: {result.stdout.strip()}")
             assert result.returncode == 0
 
     write_log("END")
