@@ -24,7 +24,7 @@ from pathlib import Path
 
 AppOptions = namedtuple(
     "AppOptions",
-    "input_csv, repo_dir, repo_name, init_date, log_dir, fossil_exe"
+    "input_csv, repo_dir, repo_name, init_date, log_dir, fossil_exe",
 )
 
 CommitProps = namedtuple(
@@ -109,8 +109,8 @@ def fossil_open_repo(opts: AppOptions, do_run: bool):
 def get_opts(argv) -> AppOptions:
 
     ap = argparse.ArgumentParser(
-        description="BakToGit - Step 3 (alternate): Using fossil instead of "
-        + "git."
+        description="BakToGit Step 3 (alternate): Use fossil instead of "
+        + "git..."
     )
     # TODO: Fill in description.
 
@@ -127,6 +127,24 @@ def get_opts(argv) -> AppOptions:
         help="Path to repository directory. This should be a new (empty) "
         + "repository, or one where the first commit from the wipbak files "
         + "is an appropriate next commit.",
+    )
+
+    ap.add_argument(
+        "--repo-name",
+        dest="repo_name",
+        action="store",
+        help="Name of the fossil repository (usually has a .fossil "
+        + "extension).",
+    )
+
+    ap.add_argument(
+        "--init-date",
+        dest="init_date",
+        action="store",
+        help="Date and time to use for fossil repository initialization. "
+        + "This should be at, or before, the time of the first source (.bak) "
+        + "file to commit. Use the ISO 8601 format for date and time "
+        + "(yyyy-mm-ddThh:mm:ss). Example: 2021-07-14T16:20:01",
     )
 
     ap.add_argument(
@@ -147,15 +165,24 @@ def get_opts(argv) -> AppOptions:
 
     repo_path = Path(args.repo_dir).expanduser().resolve()
 
+    repo_name = args.repo_name
+    if repo_name is None:
+        #  Default to repo_dir name with a .fossil suffix.
+        repo_name = f"{repo_path.stem}.fossil"
+
+    fossil_exe = args.fossil_exe
+    if fossil_exe is None:
+        #  Default to assuming the 'fossil' command is available in the PATH.
+        fossil_exe = "fossil"
+
     opts = AppOptions(
         args.input_csv,
         str(repo_path),
-        "bakrot.fossil",
-        "2020-08-17T11:20:00",
+        repo_name,
+        args.init_date,
         args.log_dir,
-        args.fossil_exe
+        args.fossil_exe,
     )
-    # TODO: Replace hard-coded values.
 
     p = Path(opts.input_csv)
     if not (p.exists() and p.is_file()):
@@ -165,10 +192,6 @@ def get_opts(argv) -> AppOptions:
     d = Path(opts.repo_dir)
     if not (d.exists() and d.is_dir()):
         sys.stderr.write(f"ERROR: Directory not found: '{d}'")
-        sys.exit(1)
-
-    if not d.joinpath(".git").exists():
-        sys.stderr.write(f"ERROR: Git repository directory not found in '{d}'")
         sys.exit(1)
 
     if opts.log_dir is not None:
@@ -258,11 +281,12 @@ def main(argv):
                 target_name = target_path / Path(item.base_name).name
                 existing_file = Path(target_name).exists()
 
-                print(f"COPY {item.full_name}")
-                print(f"  TO {target_name}")
+                write_log(f"COPY {item.full_name}")
+                write_log(f"  TO {target_name}")
 
-                #  Copy file to target repo location.
-                copy_filtered_content(item.full_name, target_name)
+                if do_commit:
+                    #  Copy file to target repo location.
+                    copy_filtered_content(item.full_name, target_name)
 
                 if not existing_file:
                     cmds = [opts.fossil_exe, "add", item.base_name]
