@@ -20,6 +20,7 @@ import sys
 from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
+from textwrap import dedent
 
 
 AppOptions = namedtuple(
@@ -78,12 +79,24 @@ def copy_filtered_content(src_name, dst_name):
                 dst_file.write(s)
 
 
+# def save_repo_init_log(repo_dir, result_stdout):
+#     # file_path = Path(repo_dir).parent / "create_repo_stdout.txt"
+#     file_path = Path().cwd() / "fossil_init_stdout.txt"
+#     file_path.write_text(result_stdout)
+
+
 def fossil_create_repo(opts: AppOptions, do_run: bool):
-    #  Only proceed if the Fossil repository does not exist.
-    p = Path(opts.repo_dir).joinpath(opts.repo_name)
+    d = Path(opts.repo_dir)
+    p = d.joinpath(opts.repo_name)
+
+    #  Only proceed if the Fossil repository does not already exist.
     if p.exists():
         sys.stderr.write("Fossil repository already exists: {0}\n".format(p))
         sys.exit(1)
+
+    if not d.exists():
+        write_log(f"mkdir {d}")
+        d.mkdir()
 
     cmds = [
         opts.fossil_exe,
@@ -94,7 +107,14 @@ def fossil_create_repo(opts: AppOptions, do_run: bool):
     ]
     write_log(f"RUN: {log_fmt(cmds)}")
     if do_run:
-        result = subprocess.run(cmds, cwd=opts.repo_dir)
+        result = subprocess.run(
+            cmds,
+            cwd=opts.repo_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        write_log(f"STDOUT:\n{result.stdout}\n")
         assert result.returncode == 0
 
 
@@ -102,7 +122,14 @@ def fossil_open_repo(opts: AppOptions, do_run: bool):
     cmds = [opts.fossil_exe, "open", opts.repo_name]
     write_log(f"RUN: {log_fmt(cmds)}")
     if do_run:
-        result = subprocess.run(cmds, cwd=opts.repo_dir)
+        result = subprocess.run(
+            cmds,
+            cwd=opts.repo_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        write_log(f"STDOUT:\n{result.stdout}\n")
         assert result.returncode == 0
 
 
@@ -189,10 +216,10 @@ def get_opts(argv) -> AppOptions:
         sys.stderr.write(f"ERROR: File not found: '{p}'")
         sys.exit(1)
 
-    d = Path(opts.repo_dir)
-    if not (d.exists() and d.is_dir()):
-        sys.stderr.write(f"ERROR: Directory not found: '{d}'")
-        sys.exit(1)
+    # d = Path(opts.repo_dir)
+    # if not (d.exists() and d.is_dir()):
+    #     sys.stderr.write(f"ERROR: Directory not found: '{d}'")
+    #     sys.exit(1)
 
     if opts.log_dir is not None:
         if not Path(opts.log_dir).exists():
@@ -292,7 +319,14 @@ def main(argv):
                     cmds = [opts.fossil_exe, "add", item.base_name]
                     write_log("({0}) RUN: {1}".format(item.datetime_tag, cmds))
                     if do_commit:
-                        result = subprocess.run(cmds, cwd=target_path)
+                        result = subprocess.run(
+                            cmds,
+                            cwd=target_path,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            text=True,
+                        )
+                        write_log(f"STDOUT:\n{result.stdout}\n")
                         assert result.returncode == 0
 
         if len(commit_msg) == 0:
@@ -312,10 +346,31 @@ def main(argv):
         write_log("({0}) RUN: {1}".format(dt_tag, log_fmt(cmds)))
 
         if do_commit:
-            result = subprocess.run(cmds, cwd=target_path)
+            result = subprocess.run(
+                cmds,
+                cwd=target_path,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+            write_log(f"STDOUT:\n{result.stdout}\n")
             assert result.returncode == 0
 
     write_log("END")
+
+    if do_commit:
+        print(
+            dedent(
+                """
+                WARNING: Log file may contain initial password for the Fossil
+                repository default admin-user. You should change the password,
+                especially if it will be exposed outside the local system.
+                You can also edit the log file to remove the password.
+                """
+            )
+        )
+
+    print(f"Log file is '{log_path}'\n")
 
     print("Done (bak_to_fossil_3.py).")
 
