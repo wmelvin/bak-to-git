@@ -23,7 +23,8 @@ from pathlib import Path
 
 
 AppOptions = namedtuple(
-    "AppOptions", "input_csv, repo_dir, log_dir", "fossil_exe"
+    "AppOptions",
+    "input_csv, repo_dir, repo_name, init_date, log_dir, fossil_exe"
 )
 
 CommitProps = namedtuple(
@@ -77,31 +78,31 @@ def copy_filtered_content(src_name, dst_name):
                 dst_file.write(s)
 
 
-def fossil_create_repo(fossil_exe, repo_dir: str):
+def fossil_create_repo(opts: AppOptions, do_run: bool):
     #  Only proceed if the Fossil repository does not exist.
-    p = Path(repo_dir).joinpath(fossil_repo)
+    p = Path(opts.repo_dir).joinpath(opts.repo_name)
     if p.exists():
         sys.stderr.write("Fossil repository already exists: {0}\n".format(p))
         sys.exit(1)
 
     cmds = [
-        fossil_exe,
+        opts.fossil_exe,
         "init",
-        fossil_repo,
+        opts.repo_name,
         "--date-override",
-        fossil_init_date,
+        opts.init_date,
     ]
     write_log(f"RUN: {log_fmt(cmds)}")
     if do_run:
-        result = subprocess.run(cmds, cwd=repo_dir)
+        result = subprocess.run(cmds, cwd=opts.repo_dir)
         assert result.returncode == 0
 
 
-def fossil_open_repo(fossil_exe, repo_dir: str):
-    cmds = [fossil_exe, "open", fossil_repo]
+def fossil_open_repo(opts: AppOptions, do_run: bool):
+    cmds = [opts.fossil_exe, "open", opts.repo_name]
     write_log(f"RUN: {log_fmt(cmds)}")
     if do_run:
-        result = subprocess.run(cmds, cwd=repo_dir)
+        result = subprocess.run(cmds, cwd=opts.repo_dir)
         assert result.returncode == 0
 
 
@@ -144,9 +145,17 @@ def get_opts(argv) -> AppOptions:
 
     args = ap.parse_args(argv[1:])
 
+    repo_path = Path(args.repo_dir).expanduser().resolve()
+
     opts = AppOptions(
-        args.input_csv, args.repo_dir, args.log_dir, args.fossil_exe
+        args.input_csv,
+        str(repo_path),
+        "bakrot.fossil",
+        "2020-08-17T11:20:00",
+        args.log_dir,
+        args.fossil_exe
     )
+    # TODO: Replace hard-coded values.
 
     p = Path(opts.input_csv)
     if not (p.exists() and p.is_file()):
@@ -198,11 +207,11 @@ def main(argv):
         do_commit = False
         write_log("MODE: What-if (actions logged, repository not affected)")
 
-    target_path = Path(opts.repo_dir).resolve()
+    fossil_create_repo(opts, do_commit)
 
-    fossil_create_repo(target_path)
+    fossil_open_repo(opts, do_commit)
 
-    fossil_open_repo(target_path)
+    target_path = Path(opts.repo_dir)
 
     commit_list = []
 
