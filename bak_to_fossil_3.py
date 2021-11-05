@@ -10,49 +10,33 @@
 #  specified date and time.
 #
 #  William Melvin
-#
-#  2021-08-23
 # ---------------------------------------------------------------------
 
+import argparse
 import csv
 import subprocess
 import sys
+
 from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
 
 
-# -- Target-specific configuration:
-
-input_csv = Path.cwd() / "prepare" / "out-1-files-changed-UPLOAD-1-newpath.csv"
-#  "-newpath" = Changed '/Work/' to '/Projects/' in file paths.
-
-fossil_repo = "bakrot.fossil"
-
-fossil_init_date = "2020-08-17T11:20:00"
-#  First tag in csv: 20200817_112125
-
-repo_dir = "~/Desktop/test/bakrot_fossil"
-
-# -- General configuration:
-
-do_run = True
-#  Set to False for debugging without actually running the fossil commands.
-#  This will still copy files to the repository directory.
-
-fossil_exe = "~/bin/fossil"
-
-log_name = Path.cwd() / "log-bak_to_fossil_3.txt"
-
+AppOptions = namedtuple(
+    "AppOptions", "input_csv, repo_dir, log_dir", "fossil_exe"
+)
 
 CommitProps = namedtuple(
     "FileProps", "sort_key, full_name, datetime_tag, base_name, commit_message"
 )
 
 
+log_path = Path.cwd() / "log-bak_to_fossil_3.txt"
+
+
 def write_log(msg):
     print(msg)
-    with open(log_name, "a") as log_file:
+    with open(log_path, "a") as log_file:
         log_file.write(f"[{datetime.now():%Y%m%d_%H%M%S}] {msg}\n")
 
 
@@ -93,7 +77,7 @@ def copy_filtered_content(src_name, dst_name):
                 dst_file.write(s)
 
 
-def fossil_create_repo(repo_dir: str):
+def fossil_create_repo(fossil_exe, repo_dir: str):
     #  Only proceed if the Fossil repository does not exist.
     p = Path(repo_dir).joinpath(fossil_repo)
     if p.exists():
@@ -113,7 +97,7 @@ def fossil_create_repo(repo_dir: str):
         assert result.returncode == 0
 
 
-def fossil_open_repo(repo_dir: str):
+def fossil_open_repo(fossil_exe, repo_dir: str):
     cmds = [fossil_exe, "open", fossil_repo]
     write_log(f"RUN: {log_fmt(cmds)}")
     if do_run:
@@ -121,10 +105,100 @@ def fossil_open_repo(repo_dir: str):
         assert result.returncode == 0
 
 
-def main():
+def get_opts(argv) -> AppOptions:
+
+    ap = argparse.ArgumentParser(
+        description="BakToGit - Step 3 (alternate): Using fossil instead of "
+        + "git."
+    )
+    # TODO: Fill in description.
+
+    ap.add_argument(
+        "input_csv",
+        action="store",
+        help="Path to CSV file, manually edited in step 2 to add commit "
+        + "messages.",
+    )
+
+    ap.add_argument(
+        "repo_dir",
+        action="store",
+        help="Path to repository directory. This should be a new (empty) "
+        + "repository, or one where the first commit from the wipbak files "
+        + "is an appropriate next commit.",
+    )
+
+    ap.add_argument(
+        "--log-dir",
+        dest="log_dir",
+        action="store",
+        help="Output directory for log files.",
+    )
+
+    ap.add_argument(
+        "--fossil-exe",
+        dest="fossil_exe",
+        action="store",
+        help="Path to the Fossil executable file.",
+    )
+
+    args = ap.parse_args(argv[1:])
+
+    opts = AppOptions(
+        args.input_csv, args.repo_dir, args.log_dir, args.fossil_exe
+    )
+
+    p = Path(opts.input_csv)
+    if not (p.exists() and p.is_file()):
+        sys.stderr.write(f"ERROR: File not found: '{p}'")
+        sys.exit(1)
+
+    d = Path(opts.repo_dir)
+    if not (d.exists() and d.is_dir()):
+        sys.stderr.write(f"ERROR: Directory not found: '{d}'")
+        sys.exit(1)
+
+    if not d.joinpath(".git").exists():
+        sys.stderr.write(f"ERROR: Git repository directory not found in '{d}'")
+        sys.exit(1)
+
+    if opts.log_dir is not None:
+        if not Path(opts.log_dir).exists():
+            sys.stderr.write(
+                f"ERROR: Log directory not found '{opts.log_dir}'"
+            )
+            sys.exit(1)
+
+    if opts.fossil_exe is not None:
+        if not Path(opts.fossil_exe).exists():
+            sys.stderr.write(f"ERROR: File not found '{opts.fossil_exe}'")
+            sys.exit(1)
+
+    return opts
+
+
+def main(argv):
+    opts = get_opts(argv)
+
+    global log_path
+    if opts.log_dir is not None:
+        log_path = (
+            Path(opts.log_dir).expanduser().resolve().joinpath(log_path.name)
+        )
+
     write_log("BEGIN")
 
-    target_path = Path(repo_dir).resolve()
+    answer = input(
+        "Commit to repository (otherwise run in 'what-if' mode) [N,y]? "
+    )
+    if answer.lower() == "y":
+        do_commit = True
+        write_log("MODE: COMMIT")
+    else:
+        do_commit = False
+        write_log("MODE: What-if (actions logged, repository not affected)")
+
+    target_path = Path(opts.repo_dir).resolve()
 
     fossil_create_repo(target_path)
 
@@ -132,9 +206,9 @@ def main():
 
     commit_list = []
 
-    write_log(f"Read {input_csv}")
+    write_log(f"Read {opts.input_csv}")
 
-    with open(input_csv) as csv_file:
+    with open(opts.input_csv) as csv_file:
         reader = csv.DictReader(csv_file)
         for row in reader:
             if len(row["full_name"]) > 0:
@@ -182,9 +256,9 @@ def main():
                 copy_filtered_content(item.full_name, target_name)
 
                 if not existing_file:
-                    cmds = [fossil_exe, "add", item.base_name]
+                    cmds = [opts.fossil_exe, "add", item.base_name]
                     write_log("({0}) RUN: {1}".format(item.datetime_tag, cmds))
-                    if do_run:
+                    if do_commit:
                         result = subprocess.run(cmds, cwd=target_path)
                         assert result.returncode == 0
 
@@ -194,7 +268,7 @@ def main():
             commit_msg = commit_msg.strip()
 
         cmds = [
-            fossil_exe,
+            opts.fossil_exe,
             "commit",
             "-m",
             commit_msg,
@@ -204,7 +278,7 @@ def main():
 
         write_log("({0}) RUN: {1}".format(dt_tag, log_fmt(cmds)))
 
-        if do_run:
+        if do_commit:
             result = subprocess.run(cmds, cwd=target_path)
             assert result.returncode == 0
 
@@ -214,4 +288,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main(sys.argv))
