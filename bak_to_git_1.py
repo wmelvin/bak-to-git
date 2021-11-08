@@ -27,14 +27,16 @@ BakProps = namedtuple(
 ChangeProps = namedtuple(
     "ChangeProps",
     "row_num, sort_key, full_name, prev_full_name, datetime_tag, base_name,"
-    + "SKIP_Y, COMMIT_MESSAGE",
+    + "SKIP_Y, COMMIT_MESSAGE, ADD_COMMAND",
 )
 
 
 def get_opts(argv) -> AppOptions:
 
     ap = argparse.ArgumentParser(
-        description="Read 'wipbak' files and write a 'csv' file."
+        description="BakToGit Step 1: Read backup (.bak) files, created by "
+        + "the 'wipbak' script, and write a CSV file with the data need to "
+        + "build a git commit history."
     )
     # TODO: Expand description.
 
@@ -56,14 +58,14 @@ def get_opts(argv) -> AppOptions:
         "--timestamp",
         dest="include_dt",
         action="store_true",
-        help="Include a date_time stamp in the output file names."
+        help="Include a date_time stamp in the output file names.",
     )
 
     ap.add_argument(
         "--write-debug",
         dest="write_debug",
         action="store_true",
-        help="Write files containing additional details useful for debugging."
+        help="Write files containing additional details useful for debugging.",
     )
 
     args = ap.parse_args(argv[1:])
@@ -82,7 +84,7 @@ def get_opts(argv) -> AppOptions:
 
 
 def main(argv):
-    now_tag = datetime.now().strftime("%Y%m%d_%H%M%S")
+    now_tag = datetime.now().strftime("%y%m%d_%H%M%S")
 
     opts = get_opts(argv)
 
@@ -211,6 +213,7 @@ def main(argv):
                             t.base_name,
                             "",
                             "",
+                            "",
                         )
                     )
                     prev_files[t.base_name] = t
@@ -227,6 +230,7 @@ def main(argv):
                         t.base_name,
                         "",
                         "",
+                        "",
                     )
                 )
                 prev_files[t.base_name] = t
@@ -234,7 +238,9 @@ def main(argv):
         #  Insert a blank row between each datetime_tag to make it more
         #  obvious which files will be grouped in a commit.
         row_num += 1
-        changed_list.append(ChangeProps(row_num, "", "", "", "", "", "", ""))
+        changed_list.append(
+            ChangeProps(row_num, "", "", "", "", "", "", "", "")
+        )
 
     #  Write main output from step 1.
 
@@ -251,8 +257,8 @@ def main(argv):
     with open(filename_out_files_changed, "w", newline="") as csv_file:
         writer = csv.writer(csv_file)
 
-        #  Add columns, 'SKIP_Y' and 'COMMIT_MESSAGE', to populate
-        #  manually in next step.
+        #  Add columns, 'SKIP_Y', 'COMMIT_MESSAGE', and 'ADD_COMMAND' to
+        #  populate manually in the next step of the BakToGit process.
         writer.writerow(
             [
                 "row",
@@ -263,6 +269,7 @@ def main(argv):
                 "base_name",
                 "SKIP_Y",
                 "COMMIT_MESSAGE",
+                "ADD_COMMAND",
             ]
         )
 
@@ -271,5 +278,5 @@ def main(argv):
     print("Done (bak_to_git_1.py).")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main(sys.argv))
