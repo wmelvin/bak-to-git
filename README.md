@@ -21,9 +21,9 @@ In step 2, the files will be compared so commit messages can be entered in the C
 
 This script does not write any output files.
 
-While using this script to launch the comparisons. Manually add commit messages to the CSV file, and select files to skip to batch changes into a single commit.  I use *LibreOffice Calc* for that, making sure it saves back to CSV format (even if it suggests otherwise).
+While using this script to launch the comparisons, manually add commit messages to the CSV file, and select files to skip (to batch changes into a single commit).  I use *LibreOffice Calc* for that, making sure it saves back to CSV format (even if it suggests otherwise).
 
-The manual editing does not have to be done in one session. The bak_to_git_2.py script will skip rows that already have a *commit message*, or are marked to *skip*.
+The manual editing does not have to be done in one session. The *bak_to_git_2.py* script will skip rows that already have a *commit message*, or are marked to *skip*.
 
 
 ## bak_to_git_3.py
@@ -46,6 +46,8 @@ This script will run the `fossil` command (instead of *git*) to commit each chan
 [Git](https://git-scm.com/)
 [Git - commit - date formats](https://git-scm.com/docs/git-commit#_date_formats)
 [Git - Environment Variables](https://git-scm.com/book/en/v2/Git-Internals-Environment-Variables)
+[Git - git-tag](https://git-scm.com/docs/git-tag)
+[Git - Tagging](https://git-scm.com/book/en/v2/Git-Basics-Tagging)
 
 ### Fossil
 [Fossil: Home](https://fossil-scm.org/home/doc/trunk/www/index.wiki)
