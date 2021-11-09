@@ -6,17 +6,29 @@ from collections import namedtuple
 from pathlib import Path
 
 
-SourceProps = namedtuple("SourceProps", "sort_key, skip, msg, cmd")
+SourceProps = namedtuple("SourceProps", "sort_key, skip, msg, cmd, notes")
 
 
-#  This utility script has hard-coded paths.
+# --- This utility script has hard-coded paths.
 
-source_csv = Path("./prepare/out-1-files-changed-EDIT.csv").resolve()
+# source_name = "./prepare/out-1-files-changed-EDIT.csv"
+# target_name = (
+#     "./output/project_bakrot/211108_095028/step-1-files-changed.csv"
+# )
+
+source_name = (
+    "./output/Project_ImageSnip/211109_084532/step-1-files-changed.csv"
+)
+target_name = (
+    "./output/Project_ImageSnip/211109_101621/step-1-files-changed.csv"
+)
+
+# ---
+
+source_csv = Path(source_name).resolve()
 assert source_csv.exists()
 
-target_csv = Path(
-    "./output/project_bakrot/211108_095028/step-1-files-changed.csv"
-).resolve()
+target_csv = Path(target_name).resolve()
 assert target_csv.exists()
 
 output_csv = target_csv.parent / f"{target_csv.stem}-with-prior-imported.csv"
@@ -37,11 +49,19 @@ with open(source_csv) as fs:
             else:
                 cmd = ""
 
+            #  The NOTES column was not in CSV files created
+            #  before 2021-11-09.
+            if "NOTES" in row.keys():
+                notes = row["NOTES"]
+            else:
+                notes = ""
+
             props = SourceProps(
                 row["sort_key"],
                 row["SKIP_Y"],
                 row["COMMIT_MESSAGE"],
                 cmd,
+                notes,
             )
 
             #  Assert sort_key is unique.
@@ -70,10 +90,12 @@ with open(target_csv) as ft:
                 assert 0 == len(out_row["SKIP_Y"])
                 assert 0 == len(out_row["COMMIT_MESSAGE"])
                 assert 0 == len(out_row["ADD_COMMAND"])
+                assert 0 == len(out_row["NOTES"])
 
                 prop: SourceProps = source_props[row_key]
                 out_row["SKIP_Y"] = prop.skip
                 out_row["COMMIT_MESSAGE"] = prop.msg
                 out_row["ADD_COMMAND"] = prop.cmd
+                out_row["NOTES"] = prop.notes
 
             writer.writerow(out_row)

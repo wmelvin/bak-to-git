@@ -27,7 +27,7 @@ BakProps = namedtuple(
 ChangeProps = namedtuple(
     "ChangeProps",
     "row_num, sort_key, full_name, prev_full_name, datetime_tag, base_name,"
-    + "SKIP_Y, COMMIT_MESSAGE, ADD_COMMAND",
+    + "SKIP_Y, COMMIT_MESSAGE, ADD_COMMAND, NOTES",
 )
 
 
@@ -115,13 +115,15 @@ def main(argv):
 
     assert output_path.exists()
 
+    print(f"Scanning '{opts.source_dir}'")
+
     bak_files = Path(opts.source_dir).rglob("*.bak")
 
     file_list = []
     datetime_tags = []
     base_names = []
 
-    #  The backup files, created by the wipbak.sh script, are named with
+    #  The backup files, created by the 'wipbak' script, are named with
     #  a .date_time tag preceeding the .bak extension (suffix). For example,
     #  'bak_to_git_1.py.20200905_105914.bak'.
 
@@ -214,6 +216,7 @@ def main(argv):
                             "",
                             "",
                             "",
+                            "",
                         )
                     )
                     prev_files[t.base_name] = t
@@ -231,6 +234,7 @@ def main(argv):
                         "",
                         "",
                         "",
+                        "",
                     )
                 )
                 prev_files[t.base_name] = t
@@ -239,7 +243,7 @@ def main(argv):
         #  obvious which files will be grouped in a commit.
         row_num += 1
         changed_list.append(
-            ChangeProps(row_num, "", "", "", "", "", "", "", "")
+            ChangeProps(row_num, "", "", "", "", "", "", "", "", "")
         )
 
     #  Write main output from step 1.
@@ -254,11 +258,13 @@ def main(argv):
             output_path.joinpath("step-1-files-changed.csv")
         )
 
+    print(f"Writing '{filename_out_files_changed}'")
+
     with open(filename_out_files_changed, "w", newline="") as csv_file:
         writer = csv.writer(csv_file)
 
-        #  Add columns, 'SKIP_Y', 'COMMIT_MESSAGE', and 'ADD_COMMAND' to
-        #  populate manually in the next step of the BakToGit process.
+        #  Add 'SKIP_Y', 'COMMIT_MESSAGE', 'ADD_COMMAND', and 'NOTES'
+        #  columns to populate manually in Step 2.
         writer.writerow(
             [
                 "row",
@@ -270,6 +276,7 @@ def main(argv):
                 "SKIP_Y",
                 "COMMIT_MESSAGE",
                 "ADD_COMMAND",
+                "NOTES",
             ]
         )
 
