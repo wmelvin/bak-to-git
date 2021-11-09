@@ -40,15 +40,23 @@ This script will run the `git` command to commit each change with the specified 
 This script will run the `fossil` command (instead of *git*) to commit each change with the specified date and time.
 
 
-## Links
+## Reference
 
 ### Git
-[Git](https://git-scm.com/)
-[Git - commit - date formats](https://git-scm.com/docs/git-commit#_date_formats)
-[Git - Environment Variables](https://git-scm.com/book/en/v2/Git-Internals-Environment-Variables)
-[Git - git-tag](https://git-scm.com/docs/git-tag)
-[Git - Tagging](https://git-scm.com/book/en/v2/Git-Basics-Tagging)
+
+[Main Page](https://git-scm.com/)
+
+Book:
+- [Recording Changes to the Repository](https://git-scm.com/book/en/v2/Git-Basics-Recording-Changes-to-the-Repository)
+- [Environment Variables](https://git-scm.com/book/en/v2/Git-Internals-Environment-Variables)
+- [Tagging](https://git-scm.com/book/en/v2/Git-Basics-Tagging)
+
+Docs:
+- [commit - date formats](https://git-scm.com/docs/git-commit#_date_formats)
+- [git-tag](https://git-scm.com/docs/git-tag)
+- [git-mv](https://git-scm.com/docs/git-mv)
 
 ### Fossil
+
 [Fossil: Home](https://fossil-scm.org/home/doc/trunk/www/index.wiki)
-[Fossil: Help: commit](https://fossil-scm.org/home/help?cmd=commit)
+[Fossil Help: commit](https://fossil-scm.org/home/help?cmd=commit)
