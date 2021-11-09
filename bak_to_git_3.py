@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import List
 
 
-AppOptions = namedtuple("AppOptions", "input_csv, repo_dir, log_dir")
+AppOptions = namedtuple("AppOptions", "input_csv, repo_dir, log_dir, what_if")
 
 
 log_path = Path.cwd() / "log-bak_to_git_3.txt"
@@ -84,6 +84,38 @@ def copy_filtered_content(src_name, dst_name):
                 dst_file.write(s)
 
 
+def split_quoted(text: str) -> List[str]:
+    """
+    Split a string into a list of words, but keep words inside double quotes
+    as a single list item (with the quotes removed).  Handles right and left
+    quote characters as saved by LibreOffice Calc.
+    Does not handle nested quotes.
+    """
+    s = text.replace("'", '"')
+    result = []
+    t = ""
+    in_quote = False
+    for a in s:
+        #  There are multiple double quote characters with different
+        #  ordinal values:
+        #    Quotation Mark is 34 (0x22).
+        #    Left Double Quotation Mark is 8220 (0x201c).
+        #    Right Double Quotation Mark is 8221 (0x201d).
+        if ord(a) in [34, 8220, 8221]:
+            in_quote = not in_quote
+        elif a == " ":
+            if in_quote:
+                t += a
+            else:
+                result.append(t)
+                t = ""
+        else:
+            t += a
+    if 0 < len(t):
+        result.append(t)
+    return result
+
+
 def get_opts(argv) -> AppOptions:
 
     ap = argparse.ArgumentParser(description="BakToGit Step 3: ...")
@@ -111,9 +143,18 @@ def get_opts(argv) -> AppOptions:
         help="Output directory for log files.",
     )
 
+    ap.add_argument(
+        "--what-if",
+        dest="what_if",
+        action="store_true",
+        help="Run in 'what-if' mode, and do not ask to commit changes.",
+    )
+
     args = ap.parse_args(argv[1:])
 
-    opts = AppOptions(args.input_csv, args.repo_dir, args.log_dir)
+    opts = AppOptions(
+        args.input_csv, args.repo_dir, args.log_dir, args.what_if
+    )
 
     p = Path(opts.input_csv)
     if not (p.exists() and p.is_file()):
@@ -150,14 +191,17 @@ def main(argv):
 
     write_log("BEGIN")
 
-    answer = input(
-        "Commit to repository (otherwise run in 'what-if' mode) [N,y]? "
-    )
-    if answer.lower() == "y":
-        do_commit = True
+    if opts.what_if:
+        do_commit = False
+    else:
+        answer = input(
+            "Commit to repository (otherwise run in 'what-if' mode) [N,y]? "
+        )
+        do_commit = answer.lower() == "y"
+
+    if do_commit:
         write_log("MODE: COMMIT")
     else:
-        do_commit = False
         write_log("MODE: What-if (actions logged, repository not affected)")
 
     commit_list: List[CommitProps] = []
@@ -205,7 +249,7 @@ def main(argv):
 
         commit_msg = ""
 
-        post_commit = ""
+        post_commit = []
 
         for item in commit_list:
             if item.datetime_tag == dt_tag:
@@ -214,9 +258,10 @@ def main(argv):
                     s += ". "
                 commit_msg += s
 
-                ac = item.add_command.strip()
+                ac: str = item.add_command.strip()
                 if 0 < len(ac):
-                    post_commit += f"{ac}|"
+                    if ac.lower().startswith("post:"):
+                        post_commit.append(ac[5:].strip())
 
                 target_name = target_path / Path(item.base_name).name
                 existing_file = Path(target_name).exists()
@@ -255,9 +300,8 @@ def main(argv):
             assert result.returncode == 0
 
         if 0 < len(post_commit):
-            pcs = post_commit.split("|")
-            for pc in pcs:
-                print(pc)
+            for pc in post_commit:
+                print(split_quoted(pc))
 
     write_log("END")
 
