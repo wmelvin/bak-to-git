@@ -12,10 +12,11 @@ import sys
 from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
+from typing import List
 
 
 AppOptions = namedtuple(
-    "AppOptions", "source_dir, output_dir, include_dt, write_debug"
+    "AppOptions", "source_dir, output_dir, include_dt, write_debug, skip_list"
 )
 
 
@@ -68,13 +69,27 @@ def get_opts(argv) -> AppOptions:
         help="Write files containing additional details useful for debugging.",
     )
 
+    ap.add_argument(
+        "--skip-names",
+        dest="skip_names",
+        action="store",
+        help="File names to mark SKIP_Y in output. Separate multiple names "
+        + "with commas (no spaces).",
+    )
+
     args = ap.parse_args(argv[1:])
+
+    if args.skip_names is None:
+        skip_list = []
+    else:
+        skip_list = [a for a in args.skip_names.split(",") if 0 < len(a)]
 
     opts = AppOptions(
         args.source_dir,
         args.output_dir,
         args.include_dt,
         args.write_debug,
+        skip_list,
     )
 
     assert Path(opts.source_dir).exists()
@@ -119,7 +134,7 @@ def main(argv):
 
     bak_files = Path(opts.source_dir).rglob("*.bak")
 
-    file_list = []
+    file_list: List[BakProps] = []
     datetime_tags = []
     base_names = []
 
@@ -187,17 +202,25 @@ def main(argv):
             for a in datetime_tags:
                 out_file.write(f"{a}\n")
 
-    changed_list = []
+    changed_list: List[ChangeProps] = []
     row_num = 0
     prev_files = {}
 
     for dt in datetime_tags:
         # print (dt)
 
-        dt_files = [p for p in file_list if p.datetime_tag == dt]
+        dt_files: List[BakProps] = [
+            p for p in file_list if p.datetime_tag == dt
+        ]
 
         for t in dt_files:
             # print(f"  {t.full_name}")
+            if t.base_name in opts.skip_list:
+                skipy = "Y"
+                note = "SKIP_Y set per --skip-names option."
+            else:
+                skipy = ""
+                note = ""
             if t.base_name in prev_files:
                 prev_props = prev_files[t.base_name]
                 prev_content = Path(prev_props.full_name).read_text()
@@ -205,38 +228,36 @@ def main(argv):
                 if prev_content != this_content:
                     #  file changed
                     row_num += 1
-                    changed_list.append(
-                        ChangeProps(
-                            row_num,
-                            t.sort_key,
-                            t.full_name,
-                            prev_props.full_name,
-                            t.datetime_tag,
-                            t.base_name,
-                            "",
-                            "",
-                            "",
-                            "",
-                        )
+                    props = ChangeProps(
+                        row_num,
+                        t.sort_key,
+                        t.full_name,
+                        prev_props.full_name,
+                        t.datetime_tag,
+                        t.base_name,
+                        skipy,
+                        "",
+                        "",
+                        note,
                     )
+                    changed_list.append(props)
                     prev_files[t.base_name] = t
             else:
                 #  new file
                 row_num += 1
-                changed_list.append(
-                    ChangeProps(
-                        row_num,
-                        t.sort_key,
-                        t.full_name,
-                        "",
-                        t.datetime_tag,
-                        t.base_name,
-                        "",
-                        "",
-                        "",
-                        "",
-                    )
+                props = ChangeProps(
+                    row_num,
+                    t.sort_key,
+                    t.full_name,
+                    "",
+                    t.datetime_tag,
+                    t.base_name,
+                    skipy,
+                    "",
+                    "",
+                    note,
                 )
+                changed_list.append(props)
                 prev_files[t.base_name] = t
 
         #  Insert a blank row between each datetime_tag to make it more
