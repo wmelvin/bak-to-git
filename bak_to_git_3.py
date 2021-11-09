@@ -14,6 +14,7 @@ from collections import namedtuple
 from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
+from typing import List
 
 
 AppOptions = namedtuple("AppOptions", "input_csv, repo_dir, log_dir")
@@ -23,7 +24,9 @@ log_path = Path.cwd() / "log-bak_to_git_3.txt"
 
 
 CommitProps = namedtuple(
-    "FileProps", "sort_key, full_name, datetime_tag, base_name, commit_message"
+    "CommitProps",
+    "sort_key, full_name, datetime_tag, base_name, "
+    + "commit_message, add_command",
 )
 
 
@@ -83,7 +86,7 @@ def copy_filtered_content(src_name, dst_name):
 
 def get_opts(argv) -> AppOptions:
 
-    ap = argparse.ArgumentParser(description="BakToGit - step 3: ...")
+    ap = argparse.ArgumentParser(description="BakToGit Step 3: ...")
     # TODO: Fill in description.
 
     ap.add_argument(
@@ -96,9 +99,9 @@ def get_opts(argv) -> AppOptions:
     ap.add_argument(
         "repo_dir",
         action="store",
-        help="Path to repository directory. This should be a new repository, "
-        + "or one where the first commit from the wipbak files is an "
-        + "appropriate next commit.",
+        help="Path to repository directory. This should be a new (empty) "
+        + "repository, or one where the first commit from the wipbak files "
+        + "is an appropriate next commit.",
     )
 
     ap.add_argument(
@@ -157,7 +160,7 @@ def main(argv):
         do_commit = False
         write_log("MODE: What-if (actions logged, repository not affected)")
 
-    commit_list = []
+    commit_list: List[CommitProps] = []
 
     write_log(f"Read {opts.input_csv}")
 
@@ -174,6 +177,7 @@ def main(argv):
                             row["datetime_tag"],
                             row["base_name"],
                             row["COMMIT_MESSAGE"],
+                            row["ADD_COMMAND"],
                         )
                     )
 
@@ -201,12 +205,19 @@ def main(argv):
 
         commit_msg = ""
 
+        post_commit = ""
+
         for item in commit_list:
             if item.datetime_tag == dt_tag:
                 s = item.commit_message.strip()
                 if 0 < len(s) and not s.endswith("."):
                     s += ". "
                 commit_msg += s
+
+                ac = item.add_command.strip()
+                if 0 < len(ac):
+                    post_commit += f"{ac}|"
+
                 target_name = target_path / Path(item.base_name).name
                 existing_file = Path(target_name).exists()
 
@@ -242,6 +253,11 @@ def main(argv):
         if do_commit:
             result = subprocess.run(cmds, cwd=target_path, env=git_env)
             assert result.returncode == 0
+
+        if 0 < len(post_commit):
+            pcs = post_commit.split("|")
+            for pc in pcs:
+                print(pc)
 
     write_log("END")
 
