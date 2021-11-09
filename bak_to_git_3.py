@@ -248,44 +248,61 @@ def main(argv):
         write_log(f"GIT ENV {git_env}")
 
         commit_msg = ""
-
+        pre_commit = []
         post_commit = []
+        commit_this: List[CommitProps] = []
 
         for item in commit_list:
             if item.datetime_tag == dt_tag:
-                s = item.commit_message.strip()
-                if 0 < len(s) and not s.endswith("."):
-                    s += ". "
-                commit_msg += s
+                com_msg = item.commit_message.strip()
+                if 0 < len(com_msg) and not com_msg.endswith("."):
+                    com_msg += ". "
+                commit_msg += com_msg
 
-                ac: str = item.add_command.strip()
-                if 0 < len(ac):
-                    if ac.lower().startswith("post:"):
-                        post_commit.append(ac[5:].strip())
+                add_cmd = item.add_command.strip()
+                if 0 < len(add_cmd):
+                    if add_cmd.lower().startswith("pre:"):
+                        pre_commit.append(add_cmd[4:].strip())
+                    elif add_cmd.lower().startswith("post:"):
+                        post_commit.append(add_cmd[5:].strip())
 
-                target_name = target_path / Path(item.base_name).name
-                existing_file = Path(target_name).exists()
+                commit_this.append(item)
 
-                write_log(f"COPY {item.full_name}")
-                write_log(f"  TO {target_name}")
-
+        #  Run any pre-commit git commands (such as 'mv').
+        if 0 < len(pre_commit):
+            for git_args in pre_commit:
+                cmds = ["git"] + split_quoted(git_args)
+                write_log("({0}) RUN (PRE): {1}".format(dt_tag, log_fmt(cmds)))
                 if do_commit:
-                    #  Copy file to target repo location.
-                    copy_filtered_content(item.full_name, target_name)
+                    result = subprocess.run(cmds, cwd=target_path, env=git_env)
+                    assert result.returncode == 0
 
-                if not existing_file:
-                    cmds = ["git", "add", item.base_name]
-                    write_log(
-                        "({0}) RUN: {1}".format(
-                            item.datetime_tag, log_fmt(cmds)
-                        )
+        #  Copy files to commit for current date_time tag.
+        for props in commit_this:
+            target_name = target_path / Path(props.base_name).name
+            existing_file = Path(target_name).exists()
+
+            write_log(f"COPY {props.full_name}")
+            write_log(f"  TO {target_name}")
+
+            if do_commit:
+                #  Copy file to target repo location.
+                copy_filtered_content(props.full_name, target_name)
+
+            if not existing_file:
+                cmds = ["git", "add", props.base_name]
+                write_log(
+                    "({0}) RUN: {1}".format(
+                        props.datetime_tag, log_fmt(cmds)
                     )
-                    if do_commit:
-                        result = subprocess.run(
-                            cmds, cwd=target_path, env=git_env
-                        )
-                        assert result.returncode == 0
+                )
+                if do_commit:
+                    result = subprocess.run(
+                        cmds, cwd=target_path, env=git_env
+                    )
+                    assert result.returncode == 0
 
+        #  Run 'git commit' for current date_time tag.
         if len(commit_msg) == 0:
             commit_msg = f"({dt_tag})"
         else:
@@ -299,9 +316,14 @@ def main(argv):
             result = subprocess.run(cmds, cwd=target_path, env=git_env)
             assert result.returncode == 0
 
+        #  Run any post-commit git commands (such as 'tag').
         if 0 < len(post_commit):
-            for pc in post_commit:
-                print(split_quoted(pc))
+            for git_args in post_commit:
+                cmds = ["git"] + split_quoted(git_args)
+                write_log("({0}) RUN (POST): {1}".format(dt_tag, log_fmt(cmds)))
+                if do_commit:
+                    result = subprocess.run(cmds, cwd=target_path, env=git_env)
+                    assert result.returncode == 0
 
     write_log("END")
 
