@@ -292,14 +292,10 @@ def main(argv):
             if not existing_file:
                 cmds = ["git", "add", props.base_name]
                 write_log(
-                    "({0}) RUN: {1}".format(
-                        props.datetime_tag, log_fmt(cmds)
-                    )
+                    "({0}) RUN: {1}".format(props.datetime_tag, log_fmt(cmds))
                 )
                 if do_commit:
-                    result = subprocess.run(
-                        cmds, cwd=target_path, env=git_env
-                    )
+                    result = subprocess.run(cmds, cwd=target_path, env=git_env)
                     assert result.returncode == 0
 
         #  Run 'git commit' for current date_time tag.
@@ -320,7 +316,9 @@ def main(argv):
         if 0 < len(post_commit):
             for git_args in post_commit:
                 cmds = ["git"] + split_quoted(git_args)
-                write_log("({0}) RUN (POST): {1}".format(dt_tag, log_fmt(cmds)))
+                write_log(
+                    "({0}) RUN (POST): {1}".format(dt_tag, log_fmt(cmds))
+                )
                 if do_commit:
                     result = subprocess.run(cmds, cwd=target_path, env=git_env)
                     assert result.returncode == 0
