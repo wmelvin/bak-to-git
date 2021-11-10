@@ -17,10 +17,9 @@ from pathlib import Path
 from typing import List
 
 
-AppOptions = namedtuple("AppOptions", "input_csv, repo_dir, log_dir, what_if")
-
-
-log_path = Path.cwd() / "log-bak_to_git_3.txt"
+AppOptions = namedtuple(
+    "AppOptions", "input_csv, repo_dir, log_dir, what_if, filter_file"
+)
 
 
 CommitProps = namedtuple(
@@ -28,6 +27,11 @@ CommitProps = namedtuple(
     "sort_key, full_name, datetime_tag, base_name, "
     + "commit_message, add_command",
 )
+
+
+log_path = Path.cwd() / "log-bak_to_git_3.txt"
+
+filter_list = []
 
 
 def write_log(msg):
@@ -77,11 +81,12 @@ def git_date_strings(dt_tag):
 def copy_filtered_content(src_name, dst_name):
     with open(src_name, "r") as src_file:
         with open(dst_name, "w") as dst_file:
-            for line in src_file.readlines():
-                #  Filter out the email address I was using at the time.
-                s = line.replace("(**REDACTED**)", "")
-                s = s.replace("**REDACTED**", "")
-                dst_file.write(s)
+            for num, line in enumerate(src_file.readlines(), start=1):
+                for filter_item in filter_list:
+                    if filter_item[0] in line:
+                        write_log(f"FILTER {src_name} ({num}): {filter_item}")
+                        line = line.replace(filter_item[0], filter_item[1])
+                dst_file.write(line)
 
 
 def split_quoted(text: str) -> List[str]:
@@ -116,6 +121,20 @@ def split_quoted(text: str) -> List[str]:
     return result
 
 
+def load_filter_list(filter_file):
+    if filter_file is None:
+        return
+    with open(filter_file) as f:
+        lines = f.readlines()
+    for line in lines:
+        s = line.strip()
+        if 0 < len(s) and not s.startswith("#"):
+            a = s.split(",")
+            assert 2 == len(a)
+            filter_item = (a[0].strip().strip('"'), a[1].strip().strip('"'))
+            filter_list.append(filter_item)
+
+
 def get_opts(argv) -> AppOptions:
 
     ap = argparse.ArgumentParser(description="BakToGit Step 3: ...")
@@ -144,6 +163,14 @@ def get_opts(argv) -> AppOptions:
     )
 
     ap.add_argument(
+        "--filter-file",
+        dest="filter_file",
+        action="store",
+        help="Path to text file with list of string replacements in "
+        + 'comma-separated format ("old string", "new string").',
+    )
+
+    ap.add_argument(
         "--what-if",
         dest="what_if",
         action="store_true",
@@ -153,7 +180,11 @@ def get_opts(argv) -> AppOptions:
     args = ap.parse_args(argv[1:])
 
     opts = AppOptions(
-        args.input_csv, args.repo_dir, args.log_dir, args.what_if
+        args.input_csv,
+        args.repo_dir,
+        args.log_dir,
+        args.what_if,
+        args.filter_file,
     )
 
     p = Path(opts.input_csv)
@@ -203,6 +234,8 @@ def main(argv):
         write_log("MODE: COMMIT")
     else:
         write_log("MODE: What-if (actions logged, repository not affected)")
+
+    load_filter_list(opts.filter_file)
 
     commit_list: List[CommitProps] = []
 
