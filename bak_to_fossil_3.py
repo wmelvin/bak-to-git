@@ -28,11 +28,13 @@ from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
 from textwrap import dedent
+from typing import List
 
 
 AppOptions = namedtuple(
     "AppOptions",
-    "input_csv, repo_dir, repo_name, init_date, log_dir, fossil_exe",
+    "input_csv, repo_dir, repo_name, init_date, log_dir, fossil_exe, "
+    + "filter_file",
 )
 
 CommitProps = namedtuple(
@@ -41,6 +43,8 @@ CommitProps = namedtuple(
 
 
 log_path = Path.cwd() / "log-bak_to_fossil_3.txt"
+
+filter_list = []
 
 
 def write_log(msg):
@@ -79,11 +83,12 @@ def get_date_string(dt_tag):
 def copy_filtered_content(src_name, dst_name):
     with open(src_name, "r") as src_file:
         with open(dst_name, "w") as dst_file:
-            for line in src_file.readlines():
-                #  Filter out the email address I was using at the time.
-                s = line.replace("(**REDACTED**)", "")
-                s = s.replace("**REDACTED**", "")
-                dst_file.write(s)
+            for num, line in enumerate(src_file.readlines(), start=1):
+                for filter_item in filter_list:
+                    if filter_item[0] in line:
+                        write_log(f"FILTER {src_name} ({num}): {filter_item}")
+                        line = line.replace(filter_item[0], filter_item[1])
+                dst_file.write(line)
 
 
 def fossil_create_repo(opts: AppOptions, do_run: bool):
@@ -132,6 +137,20 @@ def fossil_open_repo(opts: AppOptions, do_run: bool):
         )
         write_log(f"STDOUT: {result.stdout.strip()}")
         assert result.returncode == 0
+
+
+def load_filter_list(filter_file):
+    if filter_file is None:
+        return
+    with open(filter_file) as f:
+        lines = f.readlines()
+    for line in lines:
+        s = line.strip()
+        if 0 < len(s) and not s.startswith("#"):
+            a = s.split(",")
+            assert 2 == len(a)
+            filter_item = (a[0].strip().strip('"'), a[1].strip().strip('"'))
+            filter_list.append(filter_item)
 
 
 def get_opts(argv) -> AppOptions:
@@ -189,6 +208,14 @@ def get_opts(argv) -> AppOptions:
         help="Path to the Fossil executable file.",
     )
 
+    ap.add_argument(
+        "--filter-file",
+        dest="filter_file",
+        action="store",
+        help="Path to text file with list of string replacements in "
+        + 'comma-separated format ("old string", "new string").',
+    )
+
     args = ap.parse_args(argv[1:])
 
     repo_path = Path(args.repo_dir).expanduser().resolve()
@@ -210,6 +237,7 @@ def get_opts(argv) -> AppOptions:
         args.init_date,
         args.log_dir,
         args.fossil_exe,
+        args.filter_file,
     )
 
     p = Path(opts.input_csv)
@@ -227,6 +255,11 @@ def get_opts(argv) -> AppOptions:
     if opts.fossil_exe is not None:
         if not Path(opts.fossil_exe).exists():
             sys.stderr.write(f"ERROR: File not found '{opts.fossil_exe}'")
+            sys.exit(1)
+
+    if opts.filter_file is not None:
+        if not Path(opts.filter_file).exists():
+            sys.stderr.write(f"ERROR: File not found '{opts.filter_file}'")
             sys.exit(1)
 
     return opts
@@ -259,7 +292,9 @@ def main(argv):
 
     target_path = Path(opts.repo_dir)
 
-    commit_list = []
+    load_filter_list(opts.filter_file)
+
+    commit_list: List[CommitProps] = []
 
     write_log(f"Read {opts.input_csv}")
 

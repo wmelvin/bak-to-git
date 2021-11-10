@@ -208,6 +208,11 @@ def get_opts(argv) -> AppOptions:
             )
             sys.exit(1)
 
+    if opts.filter_file is not None:
+        if not Path(opts.filter_file).exists():
+            sys.stderr.write(f"ERROR: File not found '{opts.filter_file}'")
+            sys.exit(1)
+
     return opts
 
 
