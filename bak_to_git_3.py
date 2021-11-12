@@ -96,17 +96,37 @@ def split_quoted(text: str) -> List[str]:
     quote characters as saved by LibreOffice Calc.
     Does not handle nested quotes.
     """
-    s = text.replace("'", '"')
+
+    s = text.strip()
     result = []
     t = ""
+
+    #  There are multiple double quote characters with different
+    #  ordinal values:
+    #    Quotation Mark is 34 (0x0022).
+    #    Apostrophe (single quote) is 39 (0x0027).
+    #    Left Double Quotation Mark is 8220 (0x201c).
+    #    Right Double Quotation Mark is 8221 (0x201d).
+
+    #  Use first type of quotation mark found for grouping.
+    marks = None
+    marks_double = [34, 8220, 8221]
+    marks_single = [39]
+    for a in s:
+        if ord(a) in marks_double:
+            marks = marks_double
+            break
+        elif ord(a) in marks_single:
+            marks = marks_single
+            break
+
+    if marks is None:
+        #  No quotation marks, so do default split().
+        return s.split()
+
     in_quote = False
     for a in s:
-        #  There are multiple double quote characters with different
-        #  ordinal values:
-        #    Quotation Mark is 34 (0x22).
-        #    Left Double Quotation Mark is 8220 (0x201c).
-        #    Right Double Quotation Mark is 8221 (0x201d).
-        if ord(a) in [34, 8220, 8221]:
+        if ord(a) in marks:
             in_quote = not in_quote
         elif a == " ":
             if in_quote:
