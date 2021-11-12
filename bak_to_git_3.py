@@ -108,7 +108,7 @@ def split_quoted(text: str) -> List[str]:
     #    Left Double Quotation Mark is 8220 (0x201c).
     #    Right Double Quotation Mark is 8221 (0x201d).
 
-    #  Use first type of quotation mark found for grouping.
+    #  Use for grouping the first type of quotation mark found.
     marks = None
     marks_double = [34, 8220, 8221]
     marks_single = [39]
@@ -141,6 +141,17 @@ def split_quoted(text: str) -> List[str]:
     return result
 
 
+def strip_outer_quotes(text: str) -> str:
+    s = text.strip()
+    if len(s) == 0:
+        return s
+    if s[0] == '"':
+        return s.strip('"')
+    if s[0] == "'":
+        return s.strip("'")
+    return s
+
+
 def load_filter_list(filter_file):
     if filter_file is None:
         return
@@ -151,7 +162,8 @@ def load_filter_list(filter_file):
         if 0 < len(s) and not s.startswith("#"):
             a = s.split(",")
             assert 2 == len(a)
-            filter_item = (a[0].strip().strip('"'), a[1].strip().strip('"'))
+            # filter_item = (a[0].strip().strip('"'), a[1].strip().strip('"'))
+            filter_item = (strip_outer_quotes(a[0]), strip_outer_quotes(a[1]))
             filter_list.append(filter_item)
 
 
