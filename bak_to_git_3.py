@@ -97,10 +97,6 @@ def split_quoted(text: str) -> List[str]:
     Does not handle nested quotes.
     """
 
-    s = text.strip()
-    result = []
-    t = ""
-
     #  There are multiple double quote characters with different
     #  ordinal values:
     #    Quotation Mark is 34 (0x0022).
@@ -109,9 +105,13 @@ def split_quoted(text: str) -> List[str]:
     #    Right Double Quotation Mark is 8221 (0x201d).
 
     #  Use for grouping the first type of quotation mark found.
-    marks = None
     marks_double = [34, 8220, 8221]
     marks_single = [39]
+    marks = None
+
+    s = text.strip()
+    result = []
+    t = ""
     for a in s:
         if ord(a) in marks_double:
             marks = marks_double
