@@ -38,7 +38,7 @@ def run_bcompare(left_file, right_file):
 def get_opts(argv) -> AppOptions:
 
     ap = argparse.ArgumentParser(
-        description="BakToGit - step 2: Run Beyond Compare (bcompare) to "
+        description="BakToGit Step 2: Run Beyond Compare (bcompare) to "
         + "review source file changes between 'wipbak' backups. This is"
         + "to be used along with manually editing the CSV file to set "
         + "the 'SKIP_Y' and 'COMMIT_MESSAGE' columns."
@@ -68,6 +68,18 @@ def get_opts(argv) -> AppOptions:
     return opts
 
 
+def check_for_rename(add_command):
+    if add_command is None or len(add_command) == 0:
+        return ""
+    s: str = add_command.strip()
+    if s.lower().startswith("rename:"):
+        old_name = s.split(":")[1].strip().strip('"').strip("'")
+        assert 0 < len(old_name)
+        return old_name
+    else:
+        return ""
+
+
 def main(argv):
     now_tag = datetime.now().strftime("%y%m%d_%H%M%S")
 
@@ -90,56 +102,58 @@ def main(argv):
             if len(row["sort_key"]) > 0:
                 print(row["sort_key"])
                 base_name = row["base_name"]
+                no_msg = len(row["COMMIT_MESSAGE"]) == 0
 
-                # if len(row['prev_full_name']) == 0:
-                if False:
+                #  If the 'SKIP_Y' field is blank, then rows with an
+                #  existing commit message are skipped.
 
-                    print("New file")
-                else:
-                    no_msg = len(row["COMMIT_MESSAGE"]) == 0
+                #  Setting 'SKIP_Y' to 'Y' will skip the comparison
+                #  regardless of the commit message.
+                force_skip = row["SKIP_Y"].upper() == "Y"
 
-                    #  If the 'SKIP_Y' field is blank, then rows with an
-                    #  existing commit message are skipped.
+                #  Setting 'SKIP_Y' to 'N' will run the comparison
+                #  regardless of the commit message.
+                force_no_skip = row["SKIP_Y"].upper() == "N"
 
-                    #  Setting 'SKIP_Y' to 'Y' will skip the comparison
-                    #  regardless of the commit message.
-                    force_skip = row["SKIP_Y"].upper() == "Y"
+                base_rename = check_for_rename(row["ADD_COMMAND"])
 
-                    #  Setting 'SKIP_Y' to 'N' will run the comparison
-                    #  regardless of the commit message.
-                    force_no_skip = row["SKIP_Y"].upper() == "N"
+                if not force_skip:
+                    if no_msg or force_no_skip:
+                        if 0 < len(base_rename):
+                            prev_key = base_rename
+                            # TODO: Print message re rename.
+                        else:
+                            prev_key = base_name
 
-                    if not force_skip:
-                        if no_msg or force_no_skip:
-                            if base_name in prevs.keys():
-                                run_bcompare(
-                                    prevs[base_name], row["full_name"]
-                                )
-                            else:
-                                if len(row["prev_full_name"]) == 0:
-                                    print(f"New file: {base_name}")
-                                    prevs[base_name] = row["full_name"]
-                                    continue
-                                else:
-                                    warning = "UNEXPECTED PREVIOUS VERSION"
-                                    print(f"{warning}: {base_name}")
-                                    run_bcompare(
-                                        row["prev_full_name"], row["full_name"]
-                                    )
-
-                            answer = input("Continue (or Keep left) [Y,n,k]? ")
-
-                            if answer.lower() == "n":
-                                break
-
-                            if answer.lower() == "k":
-                                print(
-                                    "(Keep previous Left file for comparison)."
-                                )
-                            else:
+                        if prev_key in prevs.keys():
+                            run_bcompare(
+                                prevs[prev_key], row["full_name"]
+                            )
+                        else:
+                            if len(row["prev_full_name"]) == 0:
+                                print(f"New file: {base_name}")
                                 prevs[base_name] = row["full_name"]
+                                continue
+                            else:
+                                warning = "UNEXPECTED PREVIOUS VERSION"
+                                print(f"{warning}: {base_name}")
+                                run_bcompare(
+                                    row["prev_full_name"], row["full_name"]
+                                )
+
+                        answer = input("Continue (or Keep left) [Y,n,k]? ")
+
+                        if answer.lower() == "n":
+                            break
+
+                        if answer.lower() == "k":
+                            print(
+                                "(Keep previous Left file for comparison)."
+                            )
                         else:
                             prevs[base_name] = row["full_name"]
+                    else:
+                        prevs[base_name] = row["full_name"]
 
     print("Done (bak_to_git_2.py).")
 
