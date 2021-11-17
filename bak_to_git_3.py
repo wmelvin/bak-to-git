@@ -248,6 +248,13 @@ def get_opts(argv) -> AppOptions:
     return opts
 
 
+def git_mv_cmd(add_cmd, base_name):
+    old_name = add_cmd.split(":")[1].strip().strip('"').strip("'")
+    assert 0 < len(old_name)
+    s = f'mv "{old_name}" "{base_name}"'
+    return s
+
+
 def main(argv):
     opts = get_opts(argv)
 
@@ -335,6 +342,8 @@ def main(argv):
                         pre_commit.append(add_cmd[4:].strip())
                     elif add_cmd.lower().startswith("post:"):
                         post_commit.append(add_cmd[5:].strip())
+                    elif add_cmd.lower().startswith("rename:"):
+                        pre_commit.append(git_mv_cmd(add_cmd, item.base_name))
 
                 commit_this.append(item)
 
