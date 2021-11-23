@@ -1,5 +1,5 @@
 
-from bak_to_git_3 import split_quoted
+from bak_to_common import split_quoted
 
 
 def test_split_quoted():
