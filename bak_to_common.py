@@ -5,6 +5,16 @@ Common functions for the bak_to_*.py modules.
 from typing import List
 
 
+def log_fmt(a_list):
+    s = ""
+    for item in a_list:
+        if " " in item:
+            s += f'"{item}" '
+        else:
+            s += f"{item} "
+    return s.strip()
+
+
 def split_quoted(text: str) -> List[str]:
     """
     Split a string into a list of words, but keep words inside double quotes

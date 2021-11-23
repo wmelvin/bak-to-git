@@ -21,6 +21,7 @@
 
 import argparse
 import csv
+import os
 import subprocess
 import sys
 
@@ -30,7 +31,7 @@ from pathlib import Path
 from textwrap import dedent
 from typing import List
 
-from bak_to_common import split_quoted, strip_outer_quotes
+from bak_to_common import log_fmt, split_quoted, strip_outer_quotes
 
 
 AppOptions = namedtuple(
@@ -56,16 +57,6 @@ def write_log(msg):
     with open(log_path, "a") as log_file:
         # log_file.write(f"[{datetime.now():%Y%m%d_%H%M%S}] {msg}\n")
         log_file.write(f"{msg}\n")
-
-
-def log_fmt(items):
-    s = ""
-    for item in items:
-        if " " in item:
-            s += f'"{item}" '
-        else:
-            s += f"{item} "
-    return s.strip()
 
 
 def get_date_string(dt_tag):
@@ -278,6 +269,11 @@ def fossil_mv_cmd(add_cmd, base_name):
     return s
 
 
+# def get_timestamp(dt_str: str) -> datetime.timestamp:
+#     d = datetime.fromisoformat(dt_str)
+#     return d.timestamp()
+
+
 def main(argv):
     opts = get_opts(argv)
 
@@ -287,7 +283,7 @@ def main(argv):
             Path(opts.log_dir).expanduser().resolve().joinpath(log_path.name)
         )
 
-    write_log("BEGIN")
+    write_log(f"BEGIN at {run_dt:%Y-%m-%d %H:%M:%S}")
 
     answer = input(
         "Commit to repository (otherwise run in 'what-if' mode) [N,y]? "
@@ -390,19 +386,21 @@ def main(argv):
 
         #  Copy files to commit for current date_time tag.
         for props in commit_this:
-            target_name = target_path / Path(item.base_name).name
+            target_name = target_path / Path(props.base_name).name
             existing_file = Path(target_name).exists()
 
-            write_log(f"COPY {item.full_name}")
+            write_log(f"COPY {props.full_name}")
             write_log(f"  TO {target_name}")
 
             if do_commit:
                 #  Copy file to target repo location.
-                copy_filtered_content(item.full_name, target_name)
+                copy_filtered_content(props.full_name, target_name)
+                ts = datetime.fromisoformat(commit_dt).timestamp()
+                os.utime(target_name, (ts, ts))
 
             if not existing_file:
-                cmds = [opts.fossil_exe, "add", item.base_name]
-                write_log("({0}) RUN: {1}".format(item.datetime_tag, cmds))
+                cmds = [opts.fossil_exe, "add", props.base_name]
+                write_log("({0}) RUN: {1}".format(props.datetime_tag, cmds))
                 if do_commit:
                     result = subprocess.run(
                         cmds,
@@ -442,7 +440,7 @@ def main(argv):
             write_log(f"STDOUT: {result.stdout.strip()}")
             assert result.returncode == 0
 
-    write_log("END")
+    write_log(f"END at {datetime.now():%Y-%m-%d %H:%M:%S}")
 
     if do_commit:
         print(

@@ -7,6 +7,7 @@
 
 import argparse
 import csv
+import os
 import subprocess
 import sys
 
@@ -16,7 +17,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import List
 
-from bak_to_common import split_quoted, strip_outer_quotes
+from bak_to_common import log_fmt, split_quoted, strip_outer_quotes
 
 
 AppOptions = namedtuple(
@@ -42,16 +43,6 @@ def write_log(msg):
     with open(log_path, "a") as log_file:
         # log_file.write(f"[{datetime.now():%Y%m%d_%H%M%S}] {msg}\n")
         log_file.write(f"{msg}\n")
-
-
-def log_fmt(items):
-    s = ""
-    for item in items:
-        if " " in item:
-            s += f'"{item}" '
-        else:
-            s += f"{item} "
-    return s.strip()
 
 
 def git_date_strings(dt_tag):
@@ -317,6 +308,8 @@ def main(argv):
             if do_commit:
                 #  Copy file to target repo location.
                 copy_filtered_content(props.full_name, target_name)
+                ts = datetime.fromisoformat(commit_dt).timestamp()
+                os.utime(target_name, (ts, ts))
 
             if not existing_file:
                 cmds = ["git", "add", props.base_name]
