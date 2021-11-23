@@ -28,8 +28,9 @@ CommitProps = namedtuple(
     + "commit_message, add_command",
 )
 
+run_dt = datetime.now()
 
-log_path = Path.cwd() / "log-bak_to_git_3.txt"
+log_path = Path.cwd() / f"log-bak_to_git_3-{run_dt:%Y%m%d_%H%M%S}.txt"
 
 filter_list = []
 
@@ -37,7 +38,8 @@ filter_list = []
 def write_log(msg):
     print(msg)
     with open(log_path, "a") as log_file:
-        log_file.write(f"[{datetime.now():%Y%m%d_%H%M%S}] {msg}\n")
+        # log_file.write(f"[{datetime.now():%Y%m%d_%H%M%S}] {msg}\n")
+        log_file.write(f"{msg}\n")
 
 
 def log_fmt(items):
@@ -264,7 +266,7 @@ def main(argv):
             Path(opts.log_dir).expanduser().resolve().joinpath(log_path.name)
         )
 
-    write_log("BEGIN")
+    write_log(f"BEGIN at {run_dt:%Y-%m-%d %H:%M:%S}")
 
     if opts.what_if:
         do_commit = False
@@ -334,14 +336,15 @@ def main(argv):
                 com_msg = item.commit_message.strip()
 
                 #  If the commit_message has only a single period, that
-                #  indicates the message is attached to another file
-                #  in the same commit. The period indicates the file
-                #  was reviewed in step 2 and should not be skipped.
+                #  indicates the message is attached to another file in
+                #  the same commit, and that the current file was reviewed
+                #  in Step 2 of the overall process.
                 if com_msg == ".":
                     com_msg = ""
 
                 if 0 < len(com_msg) and not com_msg.endswith("."):
                     com_msg += ". "
+
                 commit_msg += com_msg
 
                 add_cmd = item.add_command.strip()
@@ -410,7 +413,7 @@ def main(argv):
                     result = subprocess.run(cmds, cwd=target_path, env=git_env)
                     assert result.returncode == 0
 
-    write_log("END")
+    write_log(f"END at {datetime.now():%Y-%m-%d %H:%M:%S}")
 
     print("Done (bak_to_git_3.py).")
 
