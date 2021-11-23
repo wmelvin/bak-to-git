@@ -30,6 +30,8 @@ from pathlib import Path
 from textwrap import dedent
 from typing import List
 
+from bak_to_common import split_quoted, strip_outer_quotes
+
 
 AppOptions = namedtuple(
     "AppOptions",
@@ -42,8 +44,9 @@ CommitProps = namedtuple(
     + "commit_message, add_command"
 )
 
+run_dt = datetime.now()
 
-log_path = Path.cwd() / "log-bak_to_fossil_3.txt"
+log_path = Path.cwd() / f"log-bak_to_fossil_3-{run_dt:%Y%m%d_%H%M%S}.txt"
 
 filter_list = []
 
@@ -139,17 +142,6 @@ def fossil_open_repo(opts: AppOptions, do_run: bool):
         )
         write_log(f"STDOUT: {result.stdout.strip()}")
         assert result.returncode == 0
-
-
-def strip_outer_quotes(text: str) -> str:
-    s = text.strip()
-    if len(s) == 0:
-        return s
-    if s[0] == '"':
-        return s.strip('"')
-    if s[0] == "'":
-        return s.strip("'")
-    return s
 
 
 def load_filter_list(filter_file):
@@ -279,6 +271,13 @@ def get_opts(argv) -> AppOptions:
     return opts
 
 
+def fossil_mv_cmd(add_cmd, base_name):
+    old_name = add_cmd.split(":")[1].strip().strip('"').strip("'")
+    assert 0 < len(old_name)
+    s = f'mv "{old_name}" "{base_name}"'
+    return s
+
+
 def main(argv):
     opts = get_opts(argv)
 
@@ -344,6 +343,9 @@ def main(argv):
         commit_dt = get_date_string(dt_tag)
 
         commit_msg = ""
+        pre_commit = []
+        # post_commit = []
+        commit_this: List[CommitProps] = []
 
         for item in commit_list:
             if item.datetime_tag == dt_tag:
@@ -362,31 +364,57 @@ def main(argv):
                 commit_msg += com_msg
 
                 add_cmd = item.add_command.strip()
-
-                target_name = target_path / Path(item.base_name).name
-                existing_file = Path(target_name).exists()
-
-                write_log(f"COPY {item.full_name}")
-                write_log(f"  TO {target_name}")
-
-                if do_commit:
-                    #  Copy file to target repo location.
-                    copy_filtered_content(item.full_name, target_name)
-
-                if not existing_file:
-                    cmds = [opts.fossil_exe, "add", item.base_name]
-                    write_log("({0}) RUN: {1}".format(item.datetime_tag, cmds))
-                    if do_commit:
-                        result = subprocess.run(
-                            cmds,
-                            cwd=target_path,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT,
-                            text=True,
+                if 0 < len(add_cmd):
+                    if add_cmd.lower().startswith("rename:"):
+                        pre_commit.append(
+                            fossil_mv_cmd(add_cmd, item.base_name)
                         )
-                        write_log(f"STDOUT: {result.stdout.strip()}")
-                        assert result.returncode == 0
 
+                commit_this.append(item)
+
+        #  Run any pre-commit git commands (such as 'mv').
+        if 0 < len(pre_commit):
+            for cmd_args in pre_commit:
+                cmds = [opts.fossil_exe] + split_quoted(cmd_args)
+                write_log("({0}) RUN (PRE): {1}".format(dt_tag, log_fmt(cmds)))
+                if do_commit:
+                    result = subprocess.run(
+                        cmds,
+                        cwd=target_path,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        text=True,
+                    )
+                    write_log(f"STDOUT: {result.stdout.strip()}")
+                    assert result.returncode == 0
+
+        #  Copy files to commit for current date_time tag.
+        for props in commit_this:
+            target_name = target_path / Path(item.base_name).name
+            existing_file = Path(target_name).exists()
+
+            write_log(f"COPY {item.full_name}")
+            write_log(f"  TO {target_name}")
+
+            if do_commit:
+                #  Copy file to target repo location.
+                copy_filtered_content(item.full_name, target_name)
+
+            if not existing_file:
+                cmds = [opts.fossil_exe, "add", item.base_name]
+                write_log("({0}) RUN: {1}".format(item.datetime_tag, cmds))
+                if do_commit:
+                    result = subprocess.run(
+                        cmds,
+                        cwd=target_path,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        text=True,
+                    )
+                    write_log(f"STDOUT: {result.stdout.strip()}")
+                    assert result.returncode == 0
+
+        #  Run 'fossil commit' for current date_time tag.
         if len(commit_msg) == 0:
             commit_msg = f"({dt_tag})"
         else:

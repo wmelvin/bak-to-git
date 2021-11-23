@@ -55,3 +55,14 @@ def split_quoted(text: str) -> List[str]:
     if 0 < len(t):
         result.append(t)
     return result
+
+
+def strip_outer_quotes(text: str) -> str:
+    s = text.strip()
+    if len(s) == 0:
+        return s
+    if s[0] == '"':
+        return s.strip('"')
+    if s[0] == "'":
+        return s.strip("'")
+    return s
