@@ -16,8 +16,8 @@ def main(argv):
         target_name = argv[2]
     else:
         sys.stderr.write(
-            "USAGE: csv_import_prior_work.py  source-file-name  "
-            + "target-file-name"
+            "\nUSAGE: csv_import_prior_work.py  source-file-name  "
+            + "target-file-name\n\n"
         )
         sys.exit(2)
 
@@ -85,10 +85,19 @@ def main(argv):
                 if row_key in source_props.keys():
 
                     #  Assert not replacing existing data.
-                    assert 0 == len(out_row["SKIP_Y"])
                     assert 0 == len(out_row["COMMIT_MESSAGE"])
                     assert 0 == len(out_row["ADD_COMMAND"])
-                    assert 0 == len(out_row["NOTES"])
+
+                    assert (
+                        (0 == len(out_row["SKIP_Y"]))
+                        and (0 == len(out_row["NOTES"]))
+                    ) or (
+                        (out_row["SKIP_Y"] == "Y")
+                        and (
+                            out_row["NOTES"]
+                            == "SKIP_Y set per --skip-names option."
+                        )
+                    )
 
                     prop: SourceProps = source_props[row_key]
                     out_row["SKIP_Y"] = prop.skip
