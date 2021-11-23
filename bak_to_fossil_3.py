@@ -38,7 +38,8 @@ AppOptions = namedtuple(
 )
 
 CommitProps = namedtuple(
-    "FileProps", "sort_key, full_name, datetime_tag, base_name, commit_message"
+    "CommitProps", "sort_key, full_name, datetime_tag, base_name, "
+    + "commit_message, add_command"
 )
 
 
@@ -50,7 +51,8 @@ filter_list = []
 def write_log(msg):
     print(msg)
     with open(log_path, "a") as log_file:
-        log_file.write(f"[{datetime.now():%Y%m%d_%H%M%S}] {msg}\n")
+        # log_file.write(f"[{datetime.now():%Y%m%d_%H%M%S}] {msg}\n")
+        log_file.write(f"{msg}\n")
 
 
 def log_fmt(items):
@@ -139,6 +141,17 @@ def fossil_open_repo(opts: AppOptions, do_run: bool):
         assert result.returncode == 0
 
 
+def strip_outer_quotes(text: str) -> str:
+    s = text.strip()
+    if len(s) == 0:
+        return s
+    if s[0] == '"':
+        return s.strip('"')
+    if s[0] == "'":
+        return s.strip("'")
+    return s
+
+
 def load_filter_list(filter_file):
     if filter_file is None:
         return
@@ -149,7 +162,8 @@ def load_filter_list(filter_file):
         if 0 < len(s) and not s.startswith("#"):
             a = s.split(",")
             assert 2 == len(a)
-            filter_item = (a[0].strip().strip('"'), a[1].strip().strip('"'))
+            # filter_item = (a[0].strip().strip('"'), a[1].strip().strip('"'))
+            filter_item = (strip_outer_quotes(a[0]), strip_outer_quotes(a[1]))
             filter_list.append(filter_item)
 
 
@@ -311,6 +325,7 @@ def main(argv):
                             row["datetime_tag"],
                             row["base_name"],
                             row["COMMIT_MESSAGE"],
+                            row["ADD_COMMAND"],
                         )
                     )
 
@@ -332,10 +347,22 @@ def main(argv):
 
         for item in commit_list:
             if item.datetime_tag == dt_tag:
-                s = item.commit_message.strip()
-                if 0 < len(s) and not s.endswith("."):
-                    s += ". "
-                commit_msg += s
+                com_msg = item.commit_message.strip()
+
+                #  If the commit_message has only a single period, that
+                #  indicates the message is attached to another file in
+                #  the same commit, and that the current file was reviewed
+                #  in Step 2 of the overall process.
+                if com_msg == ".":
+                    com_msg = ""
+
+                if 0 < len(com_msg) and not com_msg.endswith("."):
+                    com_msg += ". "
+
+                commit_msg += com_msg
+
+                add_cmd = item.add_command.strip()
+
                 target_name = target_path / Path(item.base_name).name
                 existing_file = Path(target_name).exists()
 
