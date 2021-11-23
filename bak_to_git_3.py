@@ -332,6 +332,14 @@ def main(argv):
         for item in commit_list:
             if item.datetime_tag == dt_tag:
                 com_msg = item.commit_message.strip()
+
+                #  If the commit_message has only a single period, that
+                #  indicates the message is attached to another file
+                #  in the same commit. The period indicates the file
+                #  was reviewed in step 2 and should not be skipped.
+                if com_msg == ".":
+                    com_msg = ""
+
                 if 0 < len(com_msg) and not com_msg.endswith("."):
                     com_msg += ". "
                 commit_msg += com_msg
