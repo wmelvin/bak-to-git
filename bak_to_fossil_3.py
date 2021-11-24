@@ -31,7 +31,12 @@ from pathlib import Path
 from textwrap import dedent
 from typing import List
 
-from bak_to_common import log_fmt, split_quoted, strip_outer_quotes
+from bak_to_common import (
+    log_fmt,
+    plain_quotes,
+    split_quoted,
+    strip_outer_quotes,
+)
 
 
 AppOptions = namedtuple(
@@ -41,8 +46,9 @@ AppOptions = namedtuple(
 )
 
 CommitProps = namedtuple(
-    "CommitProps", "sort_key, full_name, datetime_tag, base_name, "
-    + "commit_message, add_command"
+    "CommitProps",
+    "sort_key, full_name, datetime_tag, base_name, "
+    + "commit_message, add_command",
 )
 
 run_dt = datetime.now()
@@ -269,11 +275,6 @@ def fossil_mv_cmd(add_cmd, base_name):
     return s
 
 
-# def get_timestamp(dt_str: str) -> datetime.timestamp:
-#     d = datetime.fromisoformat(dt_str)
-#     return d.timestamp()
-
-
 def main(argv):
     opts = get_opts(argv)
 
@@ -345,7 +346,16 @@ def main(argv):
 
         for item in commit_list:
             if item.datetime_tag == dt_tag:
-                com_msg = item.commit_message.strip()
+                com_msg = plain_quotes(item.commit_message.strip())
+
+                #  Stop on non-ascii characters in the commit message.
+                #  TODO: This check should be temporary, just to see what
+                #  chars, besides left and right quotes, are showing up.
+                as_ascii = ascii(com_msg)
+                if "\\u" in as_ascii:
+                    print(com_msg)
+                    print(as_ascii)
+                    assert 0
 
                 #  If the commit_message has only a single period, that
                 #  indicates the message is attached to another file in

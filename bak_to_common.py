@@ -15,6 +15,26 @@ def log_fmt(a_list):
     return s.strip()
 
 
+def plain_quotes(text):
+    """
+    There may be a setting in Libre Office Calc, which I'm using to edit the
+    CSV file, that will stop it from using the fancy left and right quotes
+    (so this is probably dumb). Nonetheless, this function replaces left and
+    right, single and double quotes, with apostrophe and quotation mark
+    respectively.
+    """
+    #  https://en.wikipedia.org/wiki/Quotation_mark#Unicode_code_point_table
+
+    s = ""
+    for a in text:
+        if ord(a) in [8216, 8217]:
+            a = "'"
+        elif ord(a) in [8220, 8221]:
+            a = '"'
+        s += a
+    return s
+
+
 def split_quoted(text: str) -> List[str]:
     """
     Split a string into a list of words, but keep words inside double quotes
