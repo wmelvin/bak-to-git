@@ -19,7 +19,7 @@ from bak_to_common import log_fmt
 
 
 AppOptions = namedtuple(
-    "AppOptions", "input_csv, skip_backup, log_dir, compare_cmd"
+    "AppOptions", "input_csv, skip_backup, log_dir, run_cmd"
 )
 
 
@@ -35,10 +35,10 @@ def write_log(msg, do_print=False):
         log_file.write(f"{msg}\n")
 
 
-def run_compare(compare_cmd, left_file, right_file):
+def run_compare(run_cmd, left_file, right_file):
     print(f"\nCompare\n  L: {left_file}\n  R: {right_file}\n")
 
-    cmds = [compare_cmd, left_file, right_file]
+    cmds = [run_cmd, left_file, right_file]
 
     write_log(f"RUN: {log_fmt(cmds)}")
 
@@ -94,17 +94,20 @@ def get_opts(argv) -> AppOptions:
 
     ap.add_argument(
         "--compare-cmd",
-        dest="compare_cmd",
+        dest="run_cmd",
         default="bcompare",
         action="store",
-        help="Name of the executable command to launch the file comparison "
-        + "tool. The default is 'bcompare' (Beyond Compare).",
+        help="Alternate executable command to launch a file comparison "
+        + "tool. The tool must take the names of two files to compare as "
+        + "the first two command-line arguments. The default is 'bcompare' "
+        + "(Beyond Compare by Scooter Software, "
+        + "https://www.scootersoftware.com/).",
     )
 
     args = ap.parse_args(argv[1:])
 
     opts = AppOptions(
-        args.input_csv, args.skip_backup, args.log_dir, args.compare_cmd
+        args.input_csv, args.skip_backup, args.log_dir, args.run_cmd
     )
 
     assert Path(opts.input_csv).exists()
@@ -137,7 +140,7 @@ def get_rename(add_command):
         return ""
 
 
-def process_row(compare_cmd, row, prevs):
+def process_row(run_cmd, row, prevs):
     print(f"Row sort_key = '{row['sort_key']}'")
     base_name = row["base_name"]
     no_msg = len(row["COMMIT_MESSAGE"]) == 0
@@ -163,7 +166,7 @@ def process_row(compare_cmd, row, prevs):
             prev_key = base_name
 
         if prev_key in prevs.keys():
-            run_compare(compare_cmd, prevs[prev_key], row["full_name"])
+            run_compare(run_cmd, prevs[prev_key], row["full_name"])
         else:
             if len(row["prev_full_name"]) == 0:
                 print(f"\nNew file: {base_name}")
@@ -173,7 +176,7 @@ def process_row(compare_cmd, row, prevs):
                 warning = "UNEXPECTED PREVIOUS VERSION"
                 print(f"\n{warning}: {base_name}")
                 run_compare(
-                    compare_cmd, row["prev_full_name"], row["full_name"]
+                    run_cmd, row["prev_full_name"], row["full_name"]
                 )
 
         answer = input(
@@ -225,7 +228,7 @@ def main(argv):
         reader = csv.DictReader(csv_file)
         for row in reader:
             if len(row["sort_key"]) > 0:
-                if not process_row(opts.compare_cmd, row, prevs):
+                if not process_row(opts.run_cmd, row, prevs):
                     break
 
     write_log(f"END at {datetime.now():%Y-%m-%d %H:%M:%S}")
