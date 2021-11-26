@@ -77,8 +77,7 @@ optional arguments:
                         comparison tool. The tool must take the names of two
                         files to compare as the first two command-line
                         arguments. The default is 'bcompare' (Beyond Compare
-                        by Scooter Software,
-                        https://www.scootersoftware.com/).
+                        by Scooter Software).
 ```
 
 ## bak_to_git_3.py
