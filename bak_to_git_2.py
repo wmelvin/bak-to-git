@@ -2,7 +2,6 @@
 
 # ---------------------------------------------------------------------
 #  bak_to_git_2.py
-#
 # ---------------------------------------------------------------------
 
 import argparse
@@ -19,7 +18,7 @@ from bak_to_common import log_fmt
 
 
 AppOptions = namedtuple(
-    "AppOptions", "input_csv, skip_backup, log_dir, run_cmd"
+    "AppOptions", "csv_path, skip_backup, log_dir, run_cmd"
 )
 
 
@@ -100,18 +99,18 @@ def get_opts(argv) -> AppOptions:
         help="Alternate executable command to launch a file comparison "
         + "tool. The tool must take the names of two files to compare as "
         + "the first two command-line arguments. The default is 'bcompare' "
-        + "(Beyond Compare by Scooter Software, "
-        + "https://www.scootersoftware.com/).",
+        + "(Beyond Compare by Scooter Software).",
     )
 
     args = ap.parse_args(argv[1:])
 
     opts = AppOptions(
-        args.input_csv, args.skip_backup, args.log_dir, args.run_cmd
+        Path(args.input_csv), args.skip_backup, args.log_dir, args.run_cmd
     )
 
-    assert Path(opts.input_csv).exists()
-    assert Path(opts.input_csv).is_file()
+    if not (opts.csv_path.exists() and opts.csv_path.is_file()):
+        sys.stderr.write(f"ERROR: File not found '{opts.csv_path}'")
+        sys.exit(1)
 
     if opts.log_dir is not None:
         if not Path(opts.log_dir).exists():
@@ -175,9 +174,7 @@ def process_row(run_cmd, row, prevs):
             else:
                 warning = "UNEXPECTED PREVIOUS VERSION"
                 print(f"\n{warning}: {base_name}")
-                run_compare(
-                    run_cmd, row["prev_full_name"], row["full_name"]
-                )
+                run_compare(run_cmd, row["prev_full_name"], row["full_name"])
 
         answer = input(
             "(k = Keep left file for next comparison) Continue [Y,n,k]? "
@@ -211,20 +208,25 @@ def main(argv):
     write_log(f"BEGIN at {run_dt:%Y-%m-%d %H:%M:%S}")
 
     if not opts.skip_backup:
-        #  Make a backup of the input_csv in case there are problems while
-        #  manually editing the file.
+        #  Make a backup of the source csv file in case there are problems
+        #  while manually editing the file.
+
         bak_suffix = f".{now_tag}.bak"
-        p = Path(opts.input_csv)
-        bak_path = p.with_name(f"z-{p.name}").with_suffix(bak_suffix)
+
+        bak_path = opts.csv_path.with_name(
+            f"z-{opts.csv_path.name}"
+        ).with_suffix(bak_suffix)
+
         assert not bak_path.exists()
+
         print(f"\nSaving backup as '{bak_path.name}'\n")
         write_log(f"BACKUP: '{bak_path}'")
-        shutil.copyfile(opts.input_csv, bak_path)
+        shutil.copyfile(opts.csv_path, bak_path)
 
-    write_log(f"READ: '{opts.input_csv}'")
+    write_log(f"READ: '{opts.csv_path}'")
 
     prevs = {}
-    with open(opts.input_csv) as csv_file:
+    with open(opts.csv_path) as csv_file:
         reader = csv.DictReader(csv_file)
         for row in reader:
             if len(row["sort_key"]) > 0:
