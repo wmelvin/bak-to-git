@@ -279,11 +279,12 @@ def main(argv):
                     print(as_ascii)
                     assert 0
 
-                #  If the commit_message has only a single period, that
-                #  indicates the message is attached to another file in
-                #  the same commit, and that the current file was reviewed
-                #  in Step 2 of the overall process.
-                if com_msg == ".":
+                #  If the commit_message has only a single charcter,
+                #  treat it as ditto (no matter what character) indicating
+                #  the message is attached to another file in the same
+                #  commit, and the current file was reviewed in Step 2 of
+                #  the overall process.
+                if len(com_msg) == 1:
                     com_msg = ""
 
                 if 0 < len(com_msg) and not com_msg.endswith("."):
