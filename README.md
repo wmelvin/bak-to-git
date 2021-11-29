@@ -6,9 +6,9 @@ This set of scripts is for doing an **initial setup** of a git repository, inclu
 
 ## bak_to_git_1.py
 
-This script uses backup files, created by my `wipbak` script, to build a series of git commits. This is for a project where that script was configured to make work-in-progress backups of the fiew files in the project. Git was not considered at the start, so this is a way to "bak" into a commit history.
+This script uses backup files, created by my `wipbak` script, to build a series of git commits. This is for a project where that script was configured to make work-in-progress backups of the few files in the project. Git was not considered at the start, so this is a way to "bak" into a commit history.
 
-**Step 1:** Build a list of backup files and extract the date_time tags from the file names. Sort the list so the files changed in backups with the same date_time tag can be compared and commited as one commit. This step only builds the list and writes it to a CSV file.
+**Step 1:** Build a list of backup files and extract the date_time tags from the file names. Sort the list so the files changed in backups with the same date_time tag can be compared and committed as one commit. This step only builds the list and writes it to a CSV file.
 
 When the output from this script is ready to use, the output file should be copied or moved to a new location to use for step 2. That will keep work-in-progress separate from new outputs.
 

@@ -138,7 +138,7 @@ def main(argv):
     base_names = []
 
     #  The backup files, created by the 'wipbak' script, are named with
-    #  a .date_time tag preceeding the .bak extension (suffix). For example,
+    #  a .date_time tag preceding the .bak extension (suffix). For example,
     #  'bak_to_git_1.py.20200905_105914.bak'.
 
     for f in bak_files:
