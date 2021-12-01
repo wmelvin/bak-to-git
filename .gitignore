@@ -1,0 +1,24 @@
+# Private archives, notes, etc.
+private/
+notes-private.txt
+
+# Python.
+venv/
+__pycache__/
+
+# Tools config.
+.idea/
+.vscode/
+
+# App-specific.
+_0_bak/
+fossil_docs/
+output/
+test/
+dev-snips.txt
+filter-list.txt
+links.html
+output-h.txt
+run-help.sh
+run-sausage.sh
+wipbak-list.txt
