@@ -93,6 +93,18 @@ def copy_filtered_content(src_name, dst_name):
                 dst_file.write(line)
 
 
+def run_fossil(cmds, run_dir):
+    result = subprocess.run(
+        cmds,
+        cwd=run_dir,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    write_log(f"STDOUT: {result.stdout.strip()}")
+    assert result.returncode == 0
+
+
 def fossil_create_repo(opts: AppOptions, do_run: bool):
     d = Path(opts.repo_dir)
     p = d.joinpath(opts.repo_name)
@@ -115,30 +127,14 @@ def fossil_create_repo(opts: AppOptions, do_run: bool):
     ]
     write_log(f"RUN: {log_fmt(cmds)}")
     if do_run:
-        result = subprocess.run(
-            cmds,
-            cwd=opts.repo_dir,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-        )
-        write_log(f"STDOUT: {result.stdout.strip()}")
-        assert result.returncode == 0
+        run_fossil(cmds, opts.repo_dir)
 
 
 def fossil_open_repo(opts: AppOptions, do_run: bool):
     cmds = [opts.fossil_exe, "open", opts.repo_name]
     write_log(f"RUN: {log_fmt(cmds)}")
     if do_run:
-        result = subprocess.run(
-            cmds,
-            cwd=opts.repo_dir,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-        )
-        write_log(f"STDOUT: {result.stdout.strip()}")
-        assert result.returncode == 0
+        run_fossil(cmds, opts.repo_dir)
 
 
 def load_filter_list(filter_file):
@@ -275,6 +271,13 @@ def fossil_mv_cmd(add_cmd, base_name):
     return s
 
 
+def ask_to_continue():
+    answer = input(
+        "Commit to repository (otherwise run in 'what-if' mode) [N,y]? "
+    )
+    return answer.lower()
+
+
 def main(argv):
     opts = get_opts(argv)
 
@@ -286,10 +289,7 @@ def main(argv):
 
     write_log(f"BEGIN at {run_dt:%Y-%m-%d %H:%M:%S}")
 
-    answer = input(
-        "Commit to repository (otherwise run in 'what-if' mode) [N,y]? "
-    )
-    if answer.lower() == "y":
+    if ask_to_continue() == "y":
         do_commit = True
         write_log("MODE: COMMIT")
     else:
@@ -385,15 +385,7 @@ def main(argv):
                 cmds = [opts.fossil_exe] + split_quoted(cmd_args)
                 write_log("({0}) RUN (PRE): {1}".format(dt_tag, log_fmt(cmds)))
                 if do_commit:
-                    result = subprocess.run(
-                        cmds,
-                        cwd=target_path,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.STDOUT,
-                        text=True,
-                    )
-                    write_log(f"STDOUT: {result.stdout.strip()}")
-                    assert result.returncode == 0
+                    run_fossil(cmds, target_path)
 
         #  Copy files to commit for current date_time tag.
         for props in commit_this:
@@ -413,15 +405,7 @@ def main(argv):
                 cmds = [opts.fossil_exe, "add", props.base_name]
                 write_log("({0}) RUN: {1}".format(props.datetime_tag, cmds))
                 if do_commit:
-                    result = subprocess.run(
-                        cmds,
-                        cwd=target_path,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.STDOUT,
-                        text=True,
-                    )
-                    write_log(f"STDOUT: {result.stdout.strip()}")
-                    assert result.returncode == 0
+                    run_fossil(cmds, target_path)
 
         #  Run 'fossil commit' for current date_time tag.
         if len(commit_msg) == 0:
@@ -441,15 +425,7 @@ def main(argv):
         write_log("({0}) RUN: {1}".format(dt_tag, log_fmt(cmds)))
 
         if do_commit:
-            result = subprocess.run(
-                cmds,
-                cwd=target_path,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-            )
-            write_log(f"STDOUT: {result.stdout.strip()}")
-            assert result.returncode == 0
+            run_fossil(cmds, target_path)
 
     write_log(f"END at {datetime.now():%Y-%m-%d %H:%M:%S}")
 

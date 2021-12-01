@@ -191,6 +191,18 @@ def git_mv_cmd(add_cmd, base_name):
     return s
 
 
+def run_git(cmds, run_dir, git_env):
+    result = subprocess.run(cmds, cwd=run_dir, env=git_env)
+    assert result.returncode == 0
+
+
+def ask_to_continue():
+    answer = input(
+        "Commit to repository (otherwise run in 'what-if' mode) [N,y]? "
+    )
+    return answer.lower()
+
+
 def main(argv):
     opts = get_opts(argv)
 
@@ -205,10 +217,7 @@ def main(argv):
     if opts.what_if:
         do_commit = False
     else:
-        answer = input(
-            "Commit to repository (otherwise run in 'what-if' mode) [N,y]? "
-        )
-        do_commit = answer.lower() == "y"
+        do_commit = ask_to_continue() == "y"
 
     if do_commit:
         write_log("MODE: COMMIT")
@@ -309,8 +318,7 @@ def main(argv):
                 cmds = ["git"] + split_quoted(git_args)
                 write_log("({0}) RUN (PRE): {1}".format(dt_tag, log_fmt(cmds)))
                 if do_commit:
-                    result = subprocess.run(cmds, cwd=target_path, env=git_env)
-                    assert result.returncode == 0
+                    run_git(cmds, target_path, git_env)
 
         #  Copy files to commit for current date_time tag.
         for props in commit_this:
@@ -332,8 +340,7 @@ def main(argv):
                     "({0}) RUN: {1}".format(props.datetime_tag, log_fmt(cmds))
                 )
                 if do_commit:
-                    result = subprocess.run(cmds, cwd=target_path, env=git_env)
-                    assert result.returncode == 0
+                    run_git(cmds, target_path, git_env)
 
         #  Run 'git commit' for current date_time tag.
         if len(commit_msg) == 0:
@@ -346,8 +353,7 @@ def main(argv):
         write_log("({0}) RUN: {1}".format(dt_tag, log_fmt(cmds)))
 
         if do_commit:
-            result = subprocess.run(cmds, cwd=target_path, env=git_env)
-            assert result.returncode == 0
+            run_git(cmds, target_path, git_env)
 
         #  Run any post-commit git commands (such as 'tag').
         if 0 < len(post_commit):
@@ -357,8 +363,7 @@ def main(argv):
                     "({0}) RUN (POST): {1}".format(dt_tag, log_fmt(cmds))
                 )
                 if do_commit:
-                    result = subprocess.run(cmds, cwd=target_path, env=git_env)
-                    assert result.returncode == 0
+                    run_git(cmds, target_path, git_env)
 
     write_log(f"END at {datetime.now():%Y-%m-%d %H:%M:%S}")
 

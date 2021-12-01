@@ -139,6 +139,13 @@ def get_rename(add_command):
         return ""
 
 
+def ask_to_continue():
+    answer = input(
+        "(k = Keep left file for next comparison) Continue [Y,n,k]? "
+    )
+    return answer.lower()
+
+
 def process_row(run_cmd, row, prevs):
     print(f"Row sort_key = '{row['sort_key']}'")
     base_name = row["base_name"]
@@ -176,15 +183,13 @@ def process_row(run_cmd, row, prevs):
                 print(f"\n{warning}: {base_name}")
                 run_compare(run_cmd, row["prev_full_name"], row["full_name"])
 
-        answer = input(
-            "(k = Keep left file for next comparison) Continue [Y,n,k]? "
-        )
+        answer = ask_to_continue()
 
-        if answer.lower() == "n":
+        if answer == "n":
             print("\nStopping.\n")
             return False
 
-        if answer.lower() == "k":
+        if answer == "k":
             print("\nKeeping previous Left file for comparison.\n")
         else:
             prevs[base_name] = row["full_name"]
