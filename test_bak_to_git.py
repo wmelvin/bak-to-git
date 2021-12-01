@@ -28,13 +28,54 @@ def test_split_quoted():
     assert ["a", 'b "c d"'] == split_quoted(s)
 
 
+def csv_header_row():
+    return "{},{},{},{},{},{},{},{},{},{}".format(
+        "row",
+        "sort_key",
+        "full_name",
+        "prev_full_name",
+        "datetime_tag",
+        "base_name",
+        "SKIP_Y",
+        "COMMIT_MESSAGE",
+        "ADD_COMMAND",
+        "NOTES",
+    )
+
+
+def csv_data_row(
+    row_num,
+    sort_key,
+    full_name,
+    prev_full_name,
+    datetime_tag,
+    base_name,
+    skip_y,
+    commit_message,
+    add_command,
+    notes
+):
+    return "{},{},{},{},{},{},{},{},{},{}".format(
+        row_num,
+        sort_key,
+        full_name,
+        prev_full_name,
+        datetime_tag,
+        base_name,
+        skip_y,
+        commit_message,
+        add_command,
+        notes
+    )
+
+
 @pytest.fixture(scope="module")
 def temp_paths_1(tmp_path_factory):
     """
     Makes temporary directories, for testing bak_to_git_1, and populates them
     with test files. Returns pathlib.Path objects for each.
     """
-    temp_path: Path = tmp_path_factory.mktemp("baktogit")
+    temp_path: Path = tmp_path_factory.mktemp("baktogit1")
     bak_path = temp_path / "_0_bak"
     bak_path.mkdir()
     (bak_path / "test.txt.20211001_083010.bak").write_text("One\n")
@@ -100,7 +141,7 @@ def temp_paths_2(tmp_path_factory):
     Makes temporary directories, for testing bak_to_git_2, and populates them
     with test files. Returns pathlib.Path objects for each.
     """
-    temp_path: Path = tmp_path_factory.mktemp("baktogit")
+    temp_path: Path = tmp_path_factory.mktemp("baktogit2")
     bak_path = temp_path / "_0_bak"
     bak_path.mkdir()
 
@@ -118,22 +159,9 @@ def temp_paths_2(tmp_path_factory):
 
     csv_path = temp_path / "step-1-files-changed.csv"
     csv_lines = []
+    csv_lines.append(csv_header_row())
     csv_lines.append(
-        "{},{},{},{},{},{},{},{},{},{}".format(
-            "row",
-            "sort_key",
-            "full_name",
-            "prev_full_name",
-            "datetime_tag",
-            "base_name,",
-            "SKIP_Y",
-            "COMMIT_MESSAGE",
-            "ADD_COMMAND",
-            "NOTES",
-        )
-    )
-    csv_lines.append(
-        "{},{},{},{},{},{},{},{},{},{}".format(
+        csv_data_row(
             "1",
             f"{t1}:{bak_base_name(p1.name)}",
             str(p1),
@@ -148,7 +176,7 @@ def temp_paths_2(tmp_path_factory):
     )
     csv_lines.append("2,,,,,,,,,")
     csv_lines.append(
-        "{},{},{},{},{},{},{},{},{},{}".format(
+        csv_data_row(
             "3",
             f"{t2}:{bak_base_name(p2.name)}",
             str(p2),
@@ -163,7 +191,7 @@ def temp_paths_2(tmp_path_factory):
     )
     csv_lines.append("4,,,,,,,,,")
     csv_lines.append(
-        "{},{},{},{},{},{},{},{},{},{}".format(
+        csv_data_row(
             "5",
             f"{t3}:{bak_base_name(p3.name)}",
             str(p3),
@@ -229,17 +257,17 @@ def temp_paths_3(tmp_path_factory):
     Makes temporary directories, for testing bak_to_git_3, and populates them
     with test files. Returns pathlib.Path objects for each.
     """
-    temp_path: Path = tmp_path_factory.mktemp("baktogit")
+    temp_path: Path = tmp_path_factory.mktemp("baktogit3")
     bak_path = temp_path / "_0_bak"
     bak_path.mkdir()
 
     t1 = "20211001_083010"
     p1 = bak_path / f"test.txt.{t1}.bak"
-    p1.write_text("One\n")
+    p1.write_text("One\nTahoo\nTharee\n")
 
     t2 = "20211101_093011"
     p2 = bak_path / f"test.txt.{t2}.bak"
-    p2.write_text("One\nTahoo\nTharee\n")
+    p2.write_text("One\nTahoo\nThree\n")
 
     t3 = "20211201_103012"
     p3 = bak_path / f"test.txt.{t3}.bak"
@@ -247,22 +275,9 @@ def temp_paths_3(tmp_path_factory):
 
     csv_path = temp_path / "step-1-files-changed.csv"
     csv_lines = []
+    csv_lines.append(csv_header_row())
     csv_lines.append(
-        "{},{},{},{},{},{},{},{},{},{}".format(
-            "row",
-            "sort_key",
-            "full_name",
-            "prev_full_name",
-            "datetime_tag",
-            "base_name,",
-            "SKIP_Y",
-            "COMMIT_MESSAGE",
-            "ADD_COMMAND",
-            "NOTES",
-        )
-    )
-    csv_lines.append(
-        "{},{},{},{},{},{},{},{},{},{}".format(
+        csv_data_row(
             "1",
             f"{t1}:{bak_base_name(p1.name)}",
             str(p1),
@@ -277,7 +292,7 @@ def temp_paths_3(tmp_path_factory):
     )
     csv_lines.append("2,,,,,,,,,")
     csv_lines.append(
-        "{},{},{},{},{},{},{},{},{},{}".format(
+        csv_data_row(
             "3",
             f"{t2}:{bak_base_name(p2.name)}",
             str(p2),
@@ -292,7 +307,7 @@ def temp_paths_3(tmp_path_factory):
     )
     csv_lines.append("4,,,,,,,,,")
     csv_lines.append(
-        "{},{},{},{},{},{},{},{},{},{}".format(
+        csv_data_row(
             "5",
             f"{t3}:{bak_base_name(p3.name)}",
             str(p3),
@@ -349,8 +364,8 @@ def test_bak_to_git_3(temp_paths_3, monkeypatch):
 
     bak_to_git_3.main(args)
 
-    #  Should be 1 add and 3 commits.
-    assert 4 == len(runs)
+    #  Should be 1 add and 2 commits (1 skip).
+    assert 3 == len(runs)
 
 
 def test_bak_to_fossil_3(temp_paths_3, monkeypatch):
@@ -397,5 +412,5 @@ def test_bak_to_fossil_3(temp_paths_3, monkeypatch):
 
     bak_to_fossil_3.main(args)
 
-    #  Should be 1 create-repo, 1 open-repo, 1 add, and 3 commits.
-    assert 6 == len(runs)
+    #  Should be 1 create-repo, 1 open-repo, 1 add, and 2 commits (1 skip).
+    assert 5 == len(runs)
