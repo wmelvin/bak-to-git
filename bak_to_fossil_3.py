@@ -32,6 +32,7 @@ from textwrap import dedent
 from typing import List
 
 from bak_to_common import (
+    datetime_fromisoformat,
     log_fmt,
     plain_quotes,
     split_quoted,
@@ -78,7 +79,8 @@ def get_date_string(dt_tag):
         dt_tag[11:13],
         dt_tag[13:],
     )
-    commit_dt = datetime.fromisoformat(iso_fmt)
+    #  Convert to datetime and back to string as a validity check.
+    commit_dt = datetime_fromisoformat(iso_fmt)
     return commit_dt.strftime("%Y-%m-%dT%H:%M:%S")
 
 
@@ -398,7 +400,7 @@ def main(argv):
             if do_commit:
                 #  Copy file to target repo location.
                 copy_filtered_content(props.full_name, target_name)
-                ts = datetime.fromisoformat(commit_dt).timestamp()
+                ts = datetime_fromisoformat(commit_dt).timestamp()
                 os.utime(target_name, (ts, ts))
 
             if not existing_file:

@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import List
 
 from bak_to_common import (
+    datetime_fromisoformat,
     log_fmt,
     plain_quotes,
     split_quoted,
@@ -63,7 +64,7 @@ def git_date_strings(dt_tag):
         dt_tag[13:],
     )
 
-    commit_dt = datetime.fromisoformat(iso_fmt)
+    commit_dt = datetime_fromisoformat(iso_fmt)
 
     #  I feel like the author date should be a little before
     #  the committer date, rather than exactly the same,
@@ -331,7 +332,7 @@ def main(argv):
             if do_commit:
                 #  Copy file to target repo location.
                 copy_filtered_content(props.full_name, target_name)
-                ts = datetime.fromisoformat(commit_dt).timestamp()
+                ts = datetime_fromisoformat(commit_dt).timestamp()
                 os.utime(target_name, (ts, ts))
 
             if not existing_file:

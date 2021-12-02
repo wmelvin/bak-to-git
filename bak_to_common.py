@@ -2,7 +2,35 @@
 Common functions for the bak_to_*.py modules.
 """
 
+from datetime import datetime
 from typing import List
+
+
+def datetime_fromisoformat(dts):
+    """
+    Take an ISO format datetime string and return a datetime type.
+    The datetime.fromisoformat method was new in Python 3.7. This replacement
+    works on 3.6.9, which the author is still has on some machines.
+    It may work on older versions, but that is not the target.
+    """
+    #  ISO format: yyyy-mm-ddThh:nn:ss
+    #              0....:....1....:....2
+    try:
+        assert len(dts) == 19
+        y = int(dts[0:4])
+        assert dts[4] == "-"
+        m = int(dts[5:7])
+        assert dts[7] == "-"
+        d = int(dts[8:10])
+        h = int(dts[11:13])
+        assert dts[13] == ":"
+        n = int(dts[14:16])
+        assert dts[16] == ":"
+        s = int(dts[17:19])
+        dt = datetime(y, m, d, h, n, s)
+    except Exception:
+        raise ValueError(f"Invalid date string: '{dts}'")
+    return dt
 
 
 def log_fmt(a_list):

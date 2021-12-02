@@ -1,3 +1,4 @@
+from datetime import datetime
 import pytest
 import re
 
@@ -9,7 +10,33 @@ import bak_to_git_2
 import bak_to_git_3
 import bak_to_fossil_3
 
-from bak_to_common import split_quoted
+from bak_to_common import datetime_fromisoformat, split_quoted
+
+
+def test_datetime_fromisoformat():
+    assert isinstance(datetime_fromisoformat("2001-01-01T01:01:01"), datetime)
+
+    d = datetime_fromisoformat("2001-02-03T04:05:06")
+    assert datetime(2001, 2, 3, 4, 5, 6) == d
+
+    #  Should not care about the "T".
+    d = datetime_fromisoformat("2001-02-03 04:05:06")
+    assert datetime(2001, 2, 3, 4, 5, 6) == d
+
+    with pytest.raises(ValueError):
+        datetime_fromisoformat(d)
+
+    with pytest.raises(ValueError):
+        datetime_fromisoformat(None)
+
+    with pytest.raises(ValueError):
+        datetime_fromisoformat(555)
+
+    with pytest.raises(ValueError):
+        datetime_fromisoformat("blah")
+
+    with pytest.raises(ValueError):
+        datetime_fromisoformat("2001-01-01")
 
 
 def test_split_quoted():
