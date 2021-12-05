@@ -6,6 +6,17 @@ from datetime import datetime
 from typing import List
 
 
+def ask_to_continue(prompt, choices):
+    assert 0 < len(choices)
+    assert all([x == x.lower() for x in choices])
+    while True:
+        answer = input(prompt).lower()
+        if answer in choices:
+            break
+        print("Please select from the list of valid choices.")
+    return answer
+
+
 def datetime_fromisoformat(dts):
     """
     Take an ISO format datetime string and return a datetime type.

@@ -32,6 +32,7 @@ from textwrap import dedent
 from typing import List
 
 from bak_to_common import (
+    ask_to_continue,
     datetime_fromisoformat,
     log_fmt,
     plain_quotes,
@@ -62,7 +63,6 @@ filter_list = []
 def write_log(msg):
     print(msg)
     with open(log_path, "a") as log_file:
-        # log_file.write(f"[{datetime.now():%Y%m%d_%H%M%S}] {msg}\n")
         log_file.write(f"{msg}\n")
 
 
@@ -101,7 +101,7 @@ def run_fossil(cmds, run_dir):
         cwd=run_dir,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        text=True,
+        universal_newlines=True,
     )
     write_log(f"STDOUT: {result.stdout.strip()}")
     assert result.returncode == 0
@@ -149,7 +149,6 @@ def load_filter_list(filter_file):
         if 0 < len(s) and not s.startswith("#"):
             a = s.split(",")
             assert 2 == len(a)
-            # filter_item = (a[0].strip().strip('"'), a[1].strip().strip('"'))
             filter_item = (strip_outer_quotes(a[0]), strip_outer_quotes(a[1]))
             filter_list.append(filter_item)
 
@@ -273,13 +272,6 @@ def fossil_mv_cmd(add_cmd, base_name):
     return s
 
 
-def ask_to_continue():
-    answer = input(
-        "Commit to repository (otherwise run in 'what-if' mode) [N,y]? "
-    )
-    return answer.lower()
-
-
 def main(argv):
     opts = get_opts(argv)
 
@@ -291,7 +283,10 @@ def main(argv):
 
     write_log(f"BEGIN at {run_dt:%Y-%m-%d %H:%M:%S}")
 
-    if ask_to_continue() == "y":
+    if ask_to_continue(
+        "Commit to repository (otherwise run in 'what-if' mode) [N,y]? ",
+        ["n", "y", ""]
+    ) == "y":
         do_commit = True
         write_log("MODE: COMMIT")
     else:

@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import List
 
 from bak_to_common import (
+    ask_to_continue,
     datetime_fromisoformat,
     log_fmt,
     plain_quotes,
@@ -46,7 +47,6 @@ filter_list = []
 def write_log(msg):
     print(msg)
     with open(log_path, "a") as log_file:
-        # log_file.write(f"[{datetime.now():%Y%m%d_%H%M%S}] {msg}\n")
         log_file.write(f"{msg}\n")
 
 
@@ -99,7 +99,6 @@ def load_filter_list(filter_file):
         if 0 < len(s) and not s.startswith("#"):
             a = s.split(",")
             assert 2 == len(a)
-            # filter_item = (a[0].strip().strip('"'), a[1].strip().strip('"'))
             filter_item = (strip_outer_quotes(a[0]), strip_outer_quotes(a[1]))
             filter_list.append(filter_item)
 
@@ -197,13 +196,6 @@ def run_git(cmds, run_dir, git_env):
     assert result.returncode == 0
 
 
-def ask_to_continue():
-    answer = input(
-        "Commit to repository (otherwise run in 'what-if' mode) [N,y]? "
-    )
-    return answer.lower()
-
-
 def main(argv):
     opts = get_opts(argv)
 
@@ -218,7 +210,10 @@ def main(argv):
     if opts.what_if:
         do_commit = False
     else:
-        do_commit = ask_to_continue() == "y"
+        do_commit = ask_to_continue(
+            "Commit to repository (otherwise run in 'what-if' mode) [N,y]? ",
+            ["n", "y", ""]
+        ) == "y"
 
     if do_commit:
         write_log("MODE: COMMIT")

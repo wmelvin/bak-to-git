@@ -14,7 +14,7 @@ from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
 
-from bak_to_common import log_fmt
+from bak_to_common import ask_to_continue, log_fmt
 
 
 AppOptions = namedtuple(
@@ -42,7 +42,10 @@ def run_compare(run_cmd, left_file, right_file):
     write_log(f"RUN: {log_fmt(cmds)}")
 
     result = subprocess.run(
-        cmds, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        cmds,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        universal_newlines=True,
     )
 
     if 0 < len(result.stdout):
@@ -139,13 +142,6 @@ def get_rename(add_command):
         return ""
 
 
-def ask_to_continue():
-    answer = input(
-        "(k = Keep left file for next comparison) Continue [Y,n,k]? "
-    )
-    return answer.lower()
-
-
 def process_row(run_cmd, row, prevs):
     print(f"Row sort_key = '{row['sort_key']}'")
     base_name = row["base_name"]
@@ -183,7 +179,10 @@ def process_row(run_cmd, row, prevs):
                 print(f"\n{warning}: {base_name}")
                 run_compare(run_cmd, row["prev_full_name"], row["full_name"])
 
-        answer = ask_to_continue()
+        answer = ask_to_continue(
+            "(k = Keep left file for next comparison) Continue [Y,n,k]? ",
+            ["y", "n", "k", ""],
+        )
 
         if answer == "n":
             print("\nStopping.\n")

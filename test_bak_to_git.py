@@ -10,7 +10,16 @@ import bak_to_git_2
 import bak_to_git_3
 import bak_to_fossil_3
 
-from bak_to_common import datetime_fromisoformat, split_quoted
+from bak_to_common import ask_to_continue, datetime_fromisoformat, split_quoted
+
+
+def test_ask_to_continue():
+    #  Should raise AssertionError if choices list is empty.
+    with pytest.raises(AssertionError):
+        ask_to_continue("prompt", [])
+    #  Should raise AssertionError if choices item is not lowercase.
+    with pytest.raises(AssertionError):
+        ask_to_continue("prompt", ["", "y", "N"])
 
 
 def test_datetime_fromisoformat():
@@ -249,7 +258,7 @@ def test_bak_to_git_2(temp_paths_2, monkeypatch):
         compared.append((left_file, right_file))
         return
 
-    def mock_prompt():
+    def mock_prompt(prompt, choices):
         return "y"
 
     temp_path, bak_path, csv_path = temp_paths_2
@@ -362,7 +371,7 @@ def test_bak_to_git_3(temp_paths_3, monkeypatch):
         runs.append(cmds)
         return
 
-    def mock_prompt():
+    def mock_prompt(prompt, choices):
         return "y"
 
     temp_path, bak_path, csv_path = temp_paths_3
@@ -403,7 +412,7 @@ def test_bak_to_fossil_3(temp_paths_3, monkeypatch):
         runs.append(cmds)
         return
 
-    def mock_prompt():
+    def mock_prompt(prompt, choices):
         return "y"
 
     temp_path, bak_path, csv_path = temp_paths_3
