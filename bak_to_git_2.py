@@ -16,15 +16,18 @@ from pathlib import Path
 
 from bak_to_common import ask_to_continue, log_fmt
 
-
-AppOptions = namedtuple(
-    "AppOptions", "csv_path, skip_backup, log_dir, run_cmd"
-)
+from btg2_stats import ProgressStats
 
 
 run_dt = datetime.now()
 
 log_path = Path.cwd() / f"log-bak_to_git_2-{run_dt:%Y%m%d_%H%M%S}.txt"
+
+
+AppOptions = namedtuple(
+    "AppOptions",
+    "csv_path, skip_backup, log_dir, run_cmd, stats_file, do_report",
+)
 
 
 def write_log(msg, do_print=False):
@@ -105,10 +108,35 @@ def get_opts(argv) -> AppOptions:
         + "(Beyond Compare by Scooter Software).",
     )
 
+    ap.add_argument(
+        "--report",
+        dest="do_report",
+        action="store_true",
+        help="Print a progress report to the console instead of doing an "
+        + "interactive session.",
+    )
+
+    ap.add_argument(
+        "--stats-file",
+        dest="stats_file",
+        type=str,
+        action="store",
+        help="Name of the file in which to store data used for progress "
+        + "estimates when running with the --report option.",
+    )
+
     args = ap.parse_args(argv[1:])
 
+    #  Also skip backup if running the progress (stats) report.
+    skip_bak = args.skip_backup or args.do_report
+
     opts = AppOptions(
-        Path(args.input_csv), args.skip_backup, args.log_dir, args.run_cmd
+        Path(args.input_csv),
+        skip_bak,
+        args.log_dir,
+        args.run_cmd,
+        args.stats_file,
+        args.do_report,
     )
 
     if not (opts.csv_path.exists() and opts.csv_path.is_file()):
@@ -142,7 +170,7 @@ def get_rename(add_command):
         return ""
 
 
-def process_row(run_cmd, row, prevs):
+def process_row(run_cmd, row, prevs, stats: ProgressStats):
     print(f"Row sort_key = '{row['sort_key']}'")
     base_name = row["base_name"]
     no_msg = len(row["COMMIT_MESSAGE"]) == 0
@@ -153,6 +181,14 @@ def process_row(run_cmd, row, prevs):
     #  Setting 'SKIP_Y' to 'Y' will skip the comparison
     #  regardless of the commit message.
     if row["SKIP_Y"].lower() == "y":
+        stats.count_skip()
+        return True
+
+    if not no_msg:
+        stats.count_commit()
+
+    #  If this session is for statistics report then skip the interaction.
+    if stats.do_report:
         return True
 
     #  Setting 'SKIP_Y' to 'N' will run the comparison
@@ -190,7 +226,9 @@ def process_row(run_cmd, row, prevs):
 
         if answer == "k":
             print("\nKeeping previous Left file for comparison.\n")
+            stats.log_act("skip")
         else:
+            stats.log_act("commit")
             prevs[base_name] = row["full_name"]
             print("")
     else:
@@ -210,6 +248,14 @@ def main(argv):
         )
 
     write_log(f"BEGIN at {run_dt:%Y-%m-%d %H:%M:%S}")
+
+    stats = ProgressStats(
+        opts.stats_file, save_immediate=True, is_reporting=opts.do_report
+    )
+    stats.start_session(opts.csv_path)
+
+    if opts.do_report:
+        stats.load()
 
     if not opts.skip_backup:
         #  Make a backup of the source csv file in case there are problems
@@ -234,12 +280,21 @@ def main(argv):
         reader = csv.DictReader(csv_file)
         for row in reader:
             if len(row["sort_key"]) > 0:
-                if not process_row(opts.run_cmd, row, prevs):
+                stats.count_row()
+                if not process_row(opts.run_cmd, row, prevs, stats):
                     break
 
-    write_log(f"END at {datetime.now():%Y-%m-%d %H:%M:%S}")
+    stats.stop_session()
+    stats.save()
 
-    print("Done (bak_to_git_2.py).")
+    if opts.do_report:
+        rpt = stats.report()
+        print(rpt)
+        write_log(rpt)
+    else:
+        print("Done (bak_to_git_2.py).")
+
+    write_log(f"END at {datetime.now():%Y-%m-%d %H:%M:%S}")
 
 
 if __name__ == "__main__":

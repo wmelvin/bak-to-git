@@ -1,8 +1,7 @@
-from datetime import datetime
 import pytest
 import re
 
-# from datetime import datetime
+from datetime import datetime
 from pathlib import Path
 
 import bak_to_git_1
@@ -89,7 +88,7 @@ def csv_data_row(
     skip_y,
     commit_message,
     add_command,
-    notes
+    notes,
 ):
     return "{},{},{},{},{},{},{},{},{},{}".format(
         row_num,
@@ -101,7 +100,7 @@ def csv_data_row(
         skip_y,
         commit_message,
         add_command,
-        notes
+        notes,
     )
 
 
