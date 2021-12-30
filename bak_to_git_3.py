@@ -292,8 +292,11 @@ def main(argv):
                 if len(com_msg) == 1:
                     com_msg = ""
 
-                if 0 < len(com_msg) and not com_msg.endswith("."):
-                    com_msg += ". "
+                if 0 < len(com_msg):
+                    if com_msg.endswith("."):
+                        com_msg += " "
+                    else:
+                        com_msg += ". "
 
                 commit_msg += com_msg
 

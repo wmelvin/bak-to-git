@@ -362,8 +362,11 @@ def main(argv):
                 if len(com_msg) == 1:
                     com_msg = ""
 
-                if 0 < len(com_msg) and not com_msg.endswith("."):
-                    com_msg += ". "
+                if 0 < len(com_msg):
+                    if com_msg.endswith("."):
+                        com_msg += " "
+                    else:
+                        com_msg += ". "
 
                 commit_msg += com_msg
 
@@ -376,7 +379,7 @@ def main(argv):
 
                 commit_this.append(item)
 
-        #  Run any pre-commit git commands (such as 'mv').
+        #  Run any pre-commit fossil commands (such as 'mv').
         if 0 < len(pre_commit):
             for cmd_args in pre_commit:
                 cmds = [opts.fossil_exe] + split_quoted(cmd_args)
