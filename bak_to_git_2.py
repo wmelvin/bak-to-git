@@ -276,7 +276,7 @@ def main(argv):
     write_log(f"READ: '{opts.csv_path}'")
 
     prevs = {}
-    with open(opts.csv_path) as csv_file:
+    with open(opts.csv_path, newline="") as csv_file:
         reader = csv.DictReader(csv_file)
         for row in reader:
             if len(row["sort_key"]) > 0:

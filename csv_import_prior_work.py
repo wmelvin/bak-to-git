@@ -34,7 +34,7 @@ def main(argv):
 
     print(f"Reading '{source_csv}'")
     source_props = {}
-    with open(source_csv) as fs:
+    with open(source_csv, newline="") as fs:
         reader = csv.DictReader(fs)
         for row in reader:
             if len(row["sort_key"]) > 0:
@@ -71,12 +71,12 @@ def main(argv):
     #     print(source_props[k])
 
     print(f"Reading '{target_csv}'")
-    with open(target_csv) as ft:
+    with open(target_csv, newline="") as ft:
         reader = csv.DictReader(ft)
         flds = reader.fieldnames
 
         print(f"Writing '{output_csv}'")
-        with open(output_csv, "w") as fo:
+        with open(output_csv, "w", newline="") as fo:
             writer = csv.DictWriter(fo, fieldnames=flds)
             writer.writeheader()
             for row in reader:

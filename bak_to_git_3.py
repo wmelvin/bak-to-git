@@ -226,7 +226,7 @@ def main(argv):
 
     write_log(f"Read {opts.input_csv}")
 
-    with open(opts.input_csv) as csv_file:
+    with open(opts.input_csv, newline="") as csv_file:
         reader = csv.DictReader(csv_file)
         for row in reader:
             if len(row["full_name"]) > 0:
